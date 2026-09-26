@@ -15,10 +15,10 @@ export function isChatboxAIParserLicenseRequired(error: string | undefined): boo
 }
 
 export function canRetryKnowledgeBaseFileWithServer(file: KnowledgeBaseFileRetryState): boolean {
-  return (
-    file.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR &&
-    (!file.parsed_remotely || isChatboxAIParserLicenseRequired(file.error))
-  )
+  // The legacy server retry surface is retained for imported UI stories, but
+  // AdvancedAI never sends document contents to the Chatbox cloud parser.
+  void file
+  return false
 }
 
 export function getKnowledgeBaseFileErrorLabel(errorMessage: string, t: ErrorTranslator): string {

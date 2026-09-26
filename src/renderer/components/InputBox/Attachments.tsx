@@ -1,6 +1,5 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { Typography } from '@mui/material'
-import { CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR } from '@shared/file-parse-errors'
 import type { SessionAttachmentIndexingStage } from '@shared/types'
 import { IconPlayerPlay } from '@tabler/icons-react'
 import { AlertCircle, CheckCircle, Eye, Link2, Loader2, RotateCw, Trash2 } from 'lucide-react'
@@ -30,7 +29,7 @@ function getTranslatedErrorMessage(
 ): string | undefined {
   if (!errorCode) return undefined
   if (isSessionAttachmentRagAuthError(errorCode)) {
-    return t('This large file needs Chatbox AI to finish indexing. Sign in to Chatbox AI, then retry this file.')
+    return t('Large file indexing is unavailable. Upload the file through Knowledge Base or choose a smaller file.')
   }
   if (isSessionAttachmentRagIndexingError(errorCode)) {
     return recoveryAction
@@ -66,7 +65,7 @@ function getErrorStatusLabel(errorCode: string | undefined, t: (key: string) => 
     return t('Too large')
   }
   if (isSessionAttachmentRagAuthError(errorCode)) {
-    return t('Sign in needed')
+    return t('Indexing failed')
   }
   if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR) {
     return t('Switch model')
@@ -74,11 +73,8 @@ function getErrorStatusLabel(errorCode: string | undefined, t: (key: string) => 
   if (isSessionAttachmentRagIndexingError(errorCode)) {
     return t('Indexing failed')
   }
-  if (errorCode === CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR) {
-    return t('Sign in needed')
-  }
   if (errorCode === 'license_key_required') {
-    return t('License needed')
+    return t('Processing failed')
   }
   return t('Processing failed')
 }
@@ -310,7 +306,7 @@ export function getParserDisplayName(
     case 'local':
       return t('Parser: Local')
     case 'chatbox-ai':
-      return t('Parser: {{parser}}', { parser: 'Chatbox AI' })
+      return t('Parser: Local')
     case 'mineru':
       return t('Parser: {{parser}}', { parser: 'MinerU' })
     default:

@@ -1,6 +1,6 @@
 import { Stack, Transition } from '@mantine/core'
 import { type ModelProvider, ModelProviderEnum } from '@shared/types'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import useChatboxAIModels from '@/hooks/useChatboxAIModels'
 import { useLanguage, useProviderSettings, useSettingsStore } from '@/stores/settingsStore'
@@ -18,6 +18,16 @@ export const Route = createFileRoute('/settings/chatbox-ai')({
 })
 
 export function RouteComponent() {
+  const navigate = useNavigate()
+
+  useLayoutEffect(() => {
+    navigate({ to: '/settings/provider', replace: true })
+  }, [navigate])
+
+  return null
+}
+
+export function LegacyChatboxAIRouteComponent() {
   const language = useLanguage()
   const providerId: ModelProvider = ModelProviderEnum.ChatboxAI
   const { providerSettings, setProviderSettings } = useProviderSettings(providerId)

@@ -1,5 +1,12 @@
-productName: Chatbox
-appId: xyz.chatboxapp.app
+productName: advancedai
+appId: com.advancedsolver.advancedai
+# Keep the legacy Chatbox import scheme and register AdvancedAI's preferred
+# scheme so both apps can coexist on the same machine.
+protocols:
+  - name: AdvancedAI Deep Link
+    schemes:
+      - chatbox
+      - advancedai
 asar: true
 asarUnpack:
   - "**/*.{node,dll}"
@@ -51,10 +58,6 @@ win:
         - arm64
   verifyUpdateCodeSignature: false
   artifactName: ${productName}-${version}-Setup.${ext}
-  signtoolOptions:
-    sign: ./custom_win_sign.js
-    signingHashAlgorithms:
-      - sha256
 
 nsis:
   oneClick: false
@@ -82,9 +85,6 @@ directories:
 extraResources:
   - ./assets/**
 
-publish:
-  - provider: s3
-    bucket: chatbox
-    endpoint: https://208624959c9d215edea0720162a740c1.r2.cloudflarestorage.com
-    path: /releases
-    channel: ${env.UPDATE_CHANNEL}
+# Publishing is intentionally unset for the clean build. Configure an
+# AdvancedAI-owned release channel before using an electron-builder publish
+# command; never reuse the upstream Chatbox bucket.

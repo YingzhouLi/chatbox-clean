@@ -6,7 +6,6 @@ import { getAllProviders } from './index'
 describe('provider control-plane contracts', () => {
   it('preserves the built-in registration and display order', () => {
     expect(getAllProviders().map((provider) => provider.id)).toEqual([
-      'chatbox-ai',
       'openai',
       'openai-responses',
       'gemini',

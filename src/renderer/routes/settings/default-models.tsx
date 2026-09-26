@@ -19,7 +19,7 @@ export const Route = createFileRoute('/settings/default-models')({
 export function RouteComponent() {
   const { t } = useTranslation()
   const { setSettings, ...settings } = useSettingsStore((state) => state)
-  const chatboxAIAutoText = settings.licenseKey ? t('Auto (Use Chatbox AI)')! : t('None')!
+  const automaticModelText = t('None')!
 
   return (
     <Stack p="md" gap="xl">
@@ -62,7 +62,7 @@ export function RouteComponent() {
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('Chatbox will use this model as the default for new chats.')}
+          {t('AdvancedAI will use this model as the default for new chats.')}
         </Text>
       </Stack>
 
@@ -97,7 +97,7 @@ export function RouteComponent() {
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('Chatbox will automatically use this model to rename threads.')}
+          {t('AdvancedAI will automatically use this model to rename threads.')}
         </Text>
       </Stack>
 
@@ -132,7 +132,7 @@ export function RouteComponent() {
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('Chatbox will automatically use this model to construct search term.')}
+          {t('AdvancedAI will automatically use this model to construct search terms.')}
         </Text>
       </Stack>
       <Stack gap="xs">
@@ -141,7 +141,7 @@ export function RouteComponent() {
         <ModelSelector
           position="bottom-start"
           showAuto={true}
-          autoText={settings.licenseKey ? t('Auto (Use Chatbox AI)')! : t('None')!}
+          autoText={automaticModelText}
           width={320}
           modelFilter={(model) => model.capabilities?.includes('vision') ?? false}
           selectedProviderId={settings.ocrModel?.provider}
@@ -160,14 +160,14 @@ export function RouteComponent() {
           }
         >
           <ModelSelectContent
-            autoText={settings.licenseKey ? t('Auto (Use Chatbox AI)')! : t('None')!}
+            autoText={automaticModelText}
             provider={settings.ocrModel?.provider}
             model={settings.ocrModel?.model}
           />
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('Chatbox OCRs images with this model and sends the text to models without image support.')}
+          {t('AdvancedAI uses this model to extract text from images for models without image support.')}
         </Text>
       </Stack>
 
@@ -177,7 +177,7 @@ export function RouteComponent() {
         <ModelSelector
           position="bottom-start"
           showAuto={true}
-          autoText={chatboxAIAutoText}
+          autoText={automaticModelText}
           width={320}
           modelFilter={isEmbeddingModel}
           selectedProviderId={settings.defaultEmbeddingModel?.provider}
@@ -196,7 +196,7 @@ export function RouteComponent() {
           }
         >
           <ModelSelectContent
-            autoText={chatboxAIAutoText}
+            autoText={automaticModelText}
             provider={settings.defaultEmbeddingModel?.provider}
             model={settings.defaultEmbeddingModel?.model}
             modelType="embedding"
@@ -204,7 +204,7 @@ export function RouteComponent() {
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('When selected, Chatbox will use this model instead of the automatic Chatbox AI embedding model.')}
+          {t('When selected, AdvancedAI will use this model for embeddings.')}
         </Text>
       </Stack>
 
@@ -214,7 +214,7 @@ export function RouteComponent() {
         <ModelSelector
           position="bottom-start"
           showAuto={true}
-          autoText={chatboxAIAutoText}
+          autoText={automaticModelText}
           width={320}
           modelFilter={isRerankModel}
           selectedProviderId={settings.defaultRerankModel?.provider}
@@ -233,7 +233,7 @@ export function RouteComponent() {
           }
         >
           <ModelSelectContent
-            autoText={chatboxAIAutoText}
+            autoText={automaticModelText}
             provider={settings.defaultRerankModel?.provider}
             model={settings.defaultRerankModel?.model}
             modelType="rerank"
@@ -241,7 +241,7 @@ export function RouteComponent() {
         </ModelSelector>
 
         <Text c="chatbox-tertiary" size="xs">
-          {t('When selected, Chatbox will use this model instead of the automatic Chatbox AI reranking model.')}
+          {t('When selected, AdvancedAI will use this model for reranking.')}
         </Text>
       </Stack>
     </Stack>

@@ -8,8 +8,10 @@ export interface SettingsHostDefaults {
   isDesktopLike: boolean
 }
 
-export function getDefaultDocumentParser(host: SettingsHostDefaults): DocumentParserConfig {
-  return host.isDesktopLike ? { type: 'local' } : { type: 'chatbox-ai' }
+export function getDefaultDocumentParser(_host: SettingsHostDefaults): DocumentParserConfig {
+  // AdvancedAI never uses the Chatbox cloud parser. Local parsing is available
+  // on every supported host; MinerU remains an explicit opt-in on desktop.
+  return { type: 'local' }
 }
 
 /**
@@ -53,6 +55,12 @@ export function createDefaultSettings(): Settings {
     autoCompaction: true,
     compactionThreshold: 0.6,
     pauseOnToolCallLimit: true,
+    // AdvancedAI provisions this custom provider through the launcher import
+    // protocol, so newly created sessions should target it directly.
+    defaultChatModel: {
+      provider: 'advancedsolver-one-api',
+      model: 'gpt-6-sol',
+    },
     autoLaunch: false,
     autoUpdate: true,
     betaUpdate: false,
@@ -77,7 +85,7 @@ export function createDefaultSettings(): Settings {
     },
     extension: {
       webSearch: {
-        provider: 'build-in',
+        provider: 'bing',
         tavilyApiKey: '',
         bochaApiKey: '',
         queritApiKey: '',

@@ -1,4 +1,4 @@
-import { ActionIcon, Box, Flex, Indicator, Stack, Text } from '@mantine/core'
+import { ActionIcon, Box, Flex, Stack, Text } from '@mantine/core'
 import { TestId } from '@shared/automation/testids'
 import {
   IconAdjustmentsHorizontal,
@@ -14,7 +14,6 @@ import {
   IconKeyboard,
   IconMessages,
   IconRobotFace,
-  IconSparkles,
   IconWand,
   IconWorldWww,
 } from '@tabler/icons-react'
@@ -25,17 +24,11 @@ import { Toaster } from 'sonner'
 import Divider from '@/components/common/Divider'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import Page from '@/components/layout/Page'
-import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
 import { featureFlags } from '@/utils/feature-flags'
 
 const ITEMS = [
-  {
-    key: 'chatbox-ai',
-    label: 'Chatbox AI',
-    icon: <IconSparkles className="w-full h-full" />,
-  },
   {
     key: 'provider',
     label: 'Model Provider',
@@ -155,8 +148,6 @@ export function SettingsRoot() {
   const routerState = useRouterState()
   const key = routerState.location.pathname.split('/')[2]
   const isSmallScreen = useIsSmallScreen()
-  const { providers: availableProviders } = useProviders()
-  const isChatboxAIActivated = availableProviders.some((p) => p.id === 'chatbox-ai')
 
   return (
     <Flex flex={1} h="100%" miw={isSmallScreen ? undefined : 800}>
@@ -214,9 +205,6 @@ export function SettingsRoot() {
                 >
                   {'noTranslate' in item && item.noTranslate ? item.label : t(item.label)}
                 </Text>
-                {item.key === 'chatbox-ai' && isChatboxAIActivated && (
-                  <Indicator size={8} color="chatbox-success" className="ml-auto" />
-                )}
                 {isSmallScreen && (
                   <ScalableIcon icon={IconChevronRight} size={20} className="!text-chatbox-tint-tertiary" />
                 )}

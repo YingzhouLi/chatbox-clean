@@ -36,9 +36,10 @@ import { flushSentry, sentry } from './adapters/sentry'
 import { registerAgentPersonaHandlers } from './agent-persona/ipc-handlers'
 import * as analystic from './analystic-node'
 import { AppUpdater } from './app-updater'
+import { ADVANCEDAI_APP_ID } from './app-identity'
 import * as autoLauncher from './autoLauncher'
 import { formatTooLargeFileRead, readRegularFileBytesBounded } from './bounded-file-read'
-import { handleDeepLink } from './deeplinks'
+import { handleDeepLink, isSupportedDeepLink } from './deeplinks'
 import { registerDesktopDirectRequestHandlers } from './desktop-direct-request'
 import { parseFile } from './file-parser'
 import { isQuitForInstallRequested } from './installer-command'
@@ -224,7 +225,7 @@ if (process.platform === 'linux' && !IS_HARMONY_BUILD) {
 // 这行代码是解决 Windows 通知的标题和图标不正确的问题，标题会错误显示成 electron.app.Chatbox
 // 参考：https://stackoverflow.com/questions/65859634/notification-from-electron-shows-electron-app-electron
 if (process.platform === 'win32') {
-  app.setAppUserModelId(app.name)
+  app.setAppUserModelId(ADVANCEDAI_APP_ID)
 }
 
 const RESOURCES_PATH = app.isPackaged
@@ -235,18 +236,23 @@ const getAssetPath = (...paths: string[]): string => {
   return path.join(RESOURCES_PATH, ...paths)
 }
 
-// 开发环境使用 chatbox-dev:// 协议，避免和正式版冲突
-const PROTOCOL_SCHEME = process.defaultApp ? 'chatbox-dev' : 'chatbox'
+// Keep the legacy chatbox:// protocol for existing AILauncher imports, but
+// prefer advancedai:// so an installed official Chatbox can retain its own
+// chatbox:// handler. Development builds use isolated schemes to avoid
+// claiming production protocol handlers.
+const PROTOCOL_SCHEMES = process.defaultApp ? ['chatbox-dev', 'advancedai-dev'] : ['chatbox', 'advancedai']
 
 if (MAIN_RUNTIME_POLICY.registerProtocolClient) {
-  if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1])])
+  for (const protocolScheme of PROTOCOL_SCHEMES) {
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient(protocolScheme, process.execPath, [path.resolve(process.argv[1])])
+      }
+    } else {
+      app.setAsDefaultProtocolClient(protocolScheme)
     }
-  } else {
-    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
+    log.info(`📱 URL Scheme registered: ${protocolScheme}://`)
   }
-  log.info(`📱 URL Scheme registered: ${PROTOCOL_SCHEME}://`)
 } else {
   log.info('URL Scheme registration skipped in QA mode')
 }
@@ -370,7 +376,7 @@ function createTray() {
       accelerator: 'Command+Q',
     },
   ])
-  tray.setToolTip('Chatbox')
+  tray.setToolTip('AdvancedAI')
   tray.setContextMenu(contextMenu)
   tray.on('double-click', showOrHideWindow)
   return tray
@@ -441,7 +447,7 @@ async function createWindow() {
 
   const [state] = windowState.getState()
 
-  const qaWindowTitle = MAIN_RUNTIME_POLICY.qaTaskId ? `[QA:${MAIN_RUNTIME_POLICY.qaTaskId}] Chatbox` : undefined
+  const qaWindowTitle = MAIN_RUNTIME_POLICY.qaTaskId ? `[QA:${MAIN_RUNTIME_POLICY.qaTaskId}] AdvancedAI` : undefined
 
   mainWindow = new BrowserWindow({
     show: false,
@@ -640,7 +646,7 @@ if (quitForInstallRequested) {
     }
 
     // on windows and linux, the deep link is passed in the command line
-    const url = commandLine.find((arg) => arg.startsWith('chatbox://') || arg.startsWith('chatbox-dev://'))
+    const url = commandLine.find(isSupportedDeepLink)
 
     if (url) {
       // Deep Link 场景：总是显示并聚焦窗口
@@ -698,7 +704,7 @@ if (quitForInstallRequested) {
       const url =
         process.platform === 'darwin'
           ? startupDeepLink
-          : process.argv.find((arg) => arg.startsWith('chatbox://') || arg.startsWith('chatbox-dev://'))
+          : process.argv.find(isSupportedDeepLink)
       startupDeepLink = undefined
       if (url && mainWindow) {
         // 确保窗口加载完成后再处理 Deep Link

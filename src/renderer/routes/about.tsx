@@ -6,30 +6,27 @@ import {
   Divider,
   Flex,
   Image,
-  Popover,
   Progress,
   Stack,
   Text,
   Title,
 } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
 import { IconChevronRight, IconFileText, IconHome, IconMessage2, IconPencil, IconRefresh } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Fragment, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import BrandGithub from '@/components/icons/BrandGithub'
-import BrandRedNote from '@/components/icons/BrandRedNote'
-import BrandWechat from '@/components/icons/BrandWechat'
 import Page from '@/components/layout/Page'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import useVersion from '@/hooks/useVersion'
-import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import iconPNG from '@/static/icon.png'
-import IMG_WECHAT_QRCODE from '@/static/wechat_qrcode.png'
-import { useLanguage } from '@/stores/settingsStore'
 import { installUpdate, useUpdateStore } from '@/stores/updateStore'
+
+const ADVANCEDAI_REPOSITORY_URL = 'https://github.com/YingzhouLi/chatbox-clean'
+const ADVANCEDAI_RELEASES_URL = `${ADVANCEDAI_REPOSITORY_URL}/releases`
+const ADVANCEDAI_ISSUES_URL = `${ADVANCEDAI_REPOSITORY_URL}/issues`
 
 export const Route = createFileRoute('/about')({
   component: RouteComponent,
@@ -38,7 +35,6 @@ export const Route = createFileRoute('/about')({
 function RouteComponent() {
   const { t } = useTranslation()
   const version = useVersion()
-  const language = useLanguage()
   const isSmallScreen = useIsSmallScreen()
 
   return (
@@ -49,35 +45,15 @@ function RouteComponent() {
             <Image h={100} w={100} mah={'20vw'} maw={'20vw'} src={iconPNG} />
             <Stack flex={1} gap="xxs">
               <Flex justify="space-between" align="center" wrap="wrap" gap={isSmallScreen ? 'xs' : 'sm'} rowGap="xs">
-                <Title order={5} lh={1.5} lineClamp={1} title={`Chatbox v${version.version}`}>
-                  Chatbox {/\d/.test(version.version) ? `(v${version.version})` : ''}
+                <Title order={5} lh={1.5} lineClamp={1} title={`AdvancedAI v${version.version}`}>
+                  AdvancedAI {/\d/.test(version.version) ? `(v${version.version})` : ''}
                 </Title>
 
-                <UpdateSection language={language} needCheckUpdate={version.needCheckUpdate} />
+                <UpdateSection needCheckUpdate={version.needCheckUpdate} />
               </Flex>
               <Text>{t('about-slogan')}</Text>
               <Text c="chatbox-tertiary">{t('about-introduction')}</Text>
 
-              <Flex gap="sm">
-                <Anchor
-                  size="sm"
-                  href="https://chatboxai.app/privacy"
-                  target="_blank"
-                  underline="hover"
-                  c="chatbox-tertiary"
-                >
-                  {t('Privacy Policy')}
-                </Anchor>
-                <Anchor
-                  size="sm"
-                  href="https://chatboxai.app/terms"
-                  target="_blank"
-                  underline="hover"
-                  c="chatbox-tertiary"
-                >
-                  {t('User Terms')}
-                </Anchor>
-              </Flex>
             </Stack>
           </Flex>
 
@@ -85,44 +61,31 @@ function RouteComponent() {
             <ListItem
               icon={<BrandGithub className="w-full h-full" />}
               title={t('Github')}
-              link="https://github.com/chatboxai/chatbox"
-              value="chatbox"
+              link={ADVANCEDAI_REPOSITORY_URL}
+              value="advancedai"
             />
-            {/* <ListItem
-              icon={<BrandX className="w-full h-full" />}
-              title={t('X(Twitter)')}
-              link="https://x.com/ChatboxAI_HQ"
-              value="@ChatboxAI_HQ"
-            /> */}
-            <ListItem
-              icon={<BrandRedNote className="w-full h-full" />}
-              title={t('RedNote')}
-              link="https://www.xiaohongshu.com/user/profile/67b581b6000000000e01d11f"
-              value="@63844903136"
-            />
-            <ListItem icon={<BrandWechat className="w-full h-full" />} title={t('WeChat')} right={<WechatQRCode />} />
           </List>
 
           <List>
             <ListItem
               icon={<IconHome className="w-full h-full" />}
               title={t('Official Site')}
-              link={buildChatboxUrl(`/redirect_app/homepage/${language}`)}
+              link={ADVANCEDAI_REPOSITORY_URL}
             />
             <ListItem
               icon={<IconPencil className="w-full h-full" />}
               title={t('Feedback')}
-              link={buildChatboxUrl(`/redirect_app/feedback/${language}`)}
+              link={ADVANCEDAI_ISSUES_URL}
             />
             <ListItem
               icon={<IconFileText className="w-full h-full" />}
               title={t('Changelog')}
-              link={`https://chatboxai.app/${language.split('-')[0] || 'en'}/help-center/changelog`}
+              link={ADVANCEDAI_RELEASES_URL}
             />
             <ListItem
               icon={<IconMessage2 className="w-full h-full" />}
               title={t('FAQs')}
-              link={`https://chatboxai.app/${language.split('-')[0] || 'en'}/help-center/chatbox-ai-service-faqs`}
+              link={`${ADVANCEDAI_REPOSITORY_URL}/wiki`}
             />
           </List>
         </Stack>
@@ -136,7 +99,7 @@ function RouteComponent() {
  * Desktop: check button, progress bar, error/retry, restart & install.
  * Mobile: "New version available" hint linking to app store.
  */
-function UpdateSection({ language, needCheckUpdate }: { language: string; needCheckUpdate: boolean }) {
+function UpdateSection({ needCheckUpdate }: { needCheckUpdate: boolean }) {
   const isDesktop = platform.type === 'desktop'
 
   if (isDesktop) {
@@ -144,10 +107,10 @@ function UpdateSection({ language, needCheckUpdate }: { language: string; needCh
   }
 
   // Mobile and Web both use external link
-  return <MobileUpdateHint language={language} needCheckUpdate={needCheckUpdate} />
+  return <MobileUpdateHint needCheckUpdate={needCheckUpdate} />
 }
 
-function MobileUpdateHint({ language, needCheckUpdate }: { language: string; needCheckUpdate: boolean }) {
+function MobileUpdateHint({ needCheckUpdate }: { needCheckUpdate: boolean }) {
   const { t } = useTranslation()
 
   if (needCheckUpdate) {
@@ -158,7 +121,7 @@ function MobileUpdateHint({ language, needCheckUpdate }: { language: string; nee
         color="chatbox-brand"
         radius="lg"
         className="flex-shrink-0"
-        onClick={() => platform.openLink(buildChatboxUrl(`/redirect_app/check_update/${language}`))}
+        onClick={() => platform.openLink(ADVANCEDAI_RELEASES_URL)}
       >
         {t('New version available')}
       </Button>
@@ -171,7 +134,7 @@ function MobileUpdateHint({ language, needCheckUpdate }: { language: string; nee
       variant="default"
       radius="lg"
       className="flex-shrink-0"
-      onClick={() => platform.openLink(buildChatboxUrl(`/redirect_app/check_update/${language}`))}
+      onClick={() => platform.openLink(ADVANCEDAI_RELEASES_URL)}
     >
       {t('Check Update')}
     </Button>
@@ -259,7 +222,7 @@ function DesktopUpdateSection() {
           <Anchor
             size="xs"
             c="chatbox-tertiary"
-            onClick={() => platform.openLink(buildChatboxUrl('/redirect_app/homepage/'))}
+            onClick={() => platform.openLink(ADVANCEDAI_RELEASES_URL)}
           >
             {t('Download from official site')}
           </Anchor>
@@ -282,30 +245,15 @@ function DesktopUpdateSection() {
   }
 }
 
-function WechatQRCode() {
-  const { t } = useTranslation()
-  const [opened, { close, open }] = useDisclosure(false)
-  return (
-    <Popover position="top" withArrow shadow="md" opened={opened}>
-      <Popover.Target>
-        <Text onMouseEnter={open} onMouseLeave={close} c="chatbox-brand" className="cursor-pointer">
-          {t('QR Code')}
-        </Text>
-      </Popover.Target>
-      <Popover.Dropdown style={{ pointerEvents: 'none' }}>
-        <Image src={IMG_WECHAT_QRCODE} alt="wechat qrcode" w={160} h={160} />
-      </Popover.Dropdown>
-    </Popover>
-  )
-}
 
-function List(props: { children: ReactElement[] }) {
+function List(props: { children: ReactElement | ReactElement[] }) {
+  const children = Array.isArray(props.children) ? props.children : [props.children]
   return (
     <Stack gap={0} className="rounded-lg bg-chatbox-background-secondary">
-      {props.children.map((child, index) => (
+      {children.map((child, index) => (
         <Fragment key={`child-${index}`}>
           {child}
-          {index !== props.children.length - 1 && <Divider />}
+          {index !== children.length - 1 && <Divider />}
         </Fragment>
       ))}
     </Stack>

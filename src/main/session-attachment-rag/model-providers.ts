@@ -2,7 +2,6 @@ import type { EmbeddingModel } from 'ai'
 import { CohereClient } from 'cohere-ai'
 import { getProviderSettings } from '../../shared/models'
 import { DashScopeRerankClient, isDashScopeHost } from '../knowledge-base/dashscope-rerank-client'
-import { getChatboxAPIOrigin } from '../../shared/request/chatboxai_pool'
 import { parseKnowledgeBaseModelString } from '../../shared/utils/knowledge-base-model-parser'
 import { sentry } from '../adapters/sentry'
 import { cache } from '../cache'
@@ -83,6 +82,9 @@ export async function getSessionAttachmentRerankProvider(modelString?: string | 
         }
 
         const { providerId, modelId } = parsed
+        if (providerId === 'chatbox-ai') {
+          throw new Error('Chatbox AI provider is disabled in AdvancedAI')
+        }
         const settings = getSettings()
         const { providerSetting, formattedApiHost } = getProviderSettings(
           {
@@ -93,12 +95,8 @@ export async function getSessionAttachmentRerankProvider(modelString?: string | 
           settings
         )
 
-        let apiHost = formattedApiHost
-        let token = providerSetting.apiKey
-        if (providerId === 'chatbox-ai') {
-          apiHost = getChatboxAPIOrigin()
-          token = store.get('settings.licenseKey')
-        }
+        const apiHost = formattedApiHost
+        const token = providerSetting.apiKey
 
         if (!token) {
           throw new Error(`Missing token for rerank provider: ${providerId}`)

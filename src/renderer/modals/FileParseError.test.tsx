@@ -4,7 +4,7 @@ import NiceModal from '@ebay/nice-modal-react'
 import { MantineProvider } from '@mantine/core'
 import { type ButtonHTMLAttributes, cloneElement, type ReactElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@/test-utils'
+import { act, render, screen } from '@/test-utils'
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -31,8 +31,7 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
   },
 })
 
-const { mockNavigateToSettings, mockPlatform } = vi.hoisted(() => ({
-  mockNavigateToSettings: vi.fn(),
+const { mockPlatform } = vi.hoisted(() => ({
   mockPlatform: { type: 'desktop', isDesktopLike: true },
 }))
 
@@ -78,26 +77,10 @@ vi.mock('@/components/common/AdaptiveModal', () => {
   return { AdaptiveModal }
 })
 
-vi.mock('@/modals/settings-navigation', () => ({
-  navigateToSettings: mockNavigateToSettings,
-}))
-
-vi.mock('@/packages/event', () => ({
-  trackingEvent: vi.fn(),
-}))
-
-vi.mock('@/packages/remote', () => ({
-  buildChatboxUrl: (path: string) => path,
-}))
-
 vi.mock('@/platform', () => ({
   default: Object.assign(mockPlatform, {
     openLink: vi.fn(),
   }),
-}))
-
-vi.mock('@/stores/settingActions', () => ({
-  getLanguage: () => 'en',
 }))
 
 import FileParseError from './FileParseError'
@@ -118,35 +101,25 @@ function showFileParseError(errorCode: string, fileName?: string) {
 
 describe('FileParseError', () => {
   beforeEach(() => {
-    mockNavigateToSettings.mockReset()
     mockPlatform.type = 'desktop'
     mockPlatform.isDesktopLike = true
   })
 
-  test('lets desktop users switch parsers when Chatbox AI parsing has no account license', async () => {
+  test('shows a neutral local parsing error when a legacy Chatbox parser has no license', async () => {
     showFileParseError('chatbox_ai_parser_license_key_required', 'lecture.pdf')
 
     expect(await screen.findByText('File: lecture.pdf')).toBeTruthy()
-    const openSettings = screen.getByText('Sign in to Chatbox AI')
-    const documentParser = screen.getByText('document parser')
-    expect(openSettings.tagName).toBe('BUTTON')
-    expect(documentParser.tagName).toBe('BUTTON')
-
-    fireEvent.click(openSettings)
-
-    expect(mockNavigateToSettings).toHaveBeenCalledWith('/chatbox-ai')
+    expect(screen.getByText('Failed to parse file locally. Please try a different file or parser.')).toBeTruthy()
+    expect(screen.queryByText('Sign in to Chatbox AI')).toBeNull()
   })
 
-  test.each(['web', 'mobile'])(
-    'only prompts %s users to sign in because no alternative parser is available',
-    async (type) => {
-      mockPlatform.type = type
-      mockPlatform.isDesktopLike = false
-      showFileParseError('chatbox_ai_parser_license_key_required', 'lecture.pdf')
+  test.each(['web', 'mobile'])('does not prompt %s users to sign in', async (type) => {
+    mockPlatform.type = type
+    mockPlatform.isDesktopLike = false
+    showFileParseError('chatbox_ai_parser_license_key_required', 'lecture.pdf')
 
-      expect(await screen.findByText('File: lecture.pdf')).toBeTruthy()
-      expect(screen.getByText('Sign in to Chatbox AI').tagName).toBe('BUTTON')
-      expect(screen.queryByText('document parser')).toBeNull()
-    }
-  )
+    expect(await screen.findByText('File: lecture.pdf')).toBeTruthy()
+    expect(screen.getByText('Failed to parse file locally. Please try a different file or parser.')).toBeTruthy()
+    expect(screen.queryByText('Sign in to Chatbox AI')).toBeNull()
+  })
 })

@@ -5,7 +5,6 @@ import {
   type CopilotDetail,
   createMessage,
   type ImageSource,
-  ModelProviderEnum,
   type Session,
   type SessionSettings,
 } from '@shared/types'
@@ -27,11 +26,10 @@ import InputBox, { type InputBoxPayload } from '@/components/InputBox/InputBox'
 import HomepageIcon from '@/components/icons/HomepageIcon'
 import Page from '@/components/layout/Page'
 import { getForceShowNewUserScenarioCardsFlag } from '@/dev/devToolsFlags'
-import { useMyCopilots, useRemoteCopilotsByCursor } from '@/hooks/useCopilots'
+import { useMyCopilots } from '@/hooks/useCopilots'
 import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import useVersion from '@/hooks/useVersion'
-import * as remote from '@/packages/remote'
 import { router } from '@/router'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
 import { resolveChatboxLicenseDefaultModel } from '@/stores/defaultChatModel'
@@ -54,8 +52,8 @@ const scenarioAgentModeOff = {
 } satisfies AgentModeEntry
 
 const firstChatScenarioDefaultModel = {
-  provider: ModelProviderEnum.ChatboxAI,
-  modelId: 'chatboxai-3.5',
+  provider: 'advancedsolver-one-api',
+  modelId: 'gpt-6-sol',
 } satisfies Pick<SessionSettings, 'provider' | 'modelId'>
 
 export const Route = createFileRoute('/')({
@@ -208,11 +206,10 @@ function Index() {
   ])
 
   const { copilots: myCopilots } = useMyCopilots()
-  const { copilots: remoteCopilots } = useRemoteCopilotsByCursor({ limit: 10 })
   const selectedCopilotId = useMemo(() => session?.copilotId, [session?.copilotId])
   const selectedCopilot = useMemo(
-    () => myCopilots.find((c) => c.id === selectedCopilotId) || remoteCopilots.find((c) => c.id === selectedCopilotId),
-    [myCopilots, remoteCopilots, selectedCopilotId]
+    () => myCopilots.find((c) => c.id === selectedCopilotId),
+    [myCopilots, selectedCopilotId]
   )
   useEffect(() => {
     setSession((old) => ({
@@ -319,12 +316,6 @@ function Index() {
           ...options?.settingsOverride,
         },
       })
-
-      if (session.copilotId) {
-        void remote
-          .recordCopilotUsage({ id: session.copilotId, action: 'create_session' })
-          .catch((error) => console.warn('[recordCopilotUsage] failed', error))
-      }
 
       // Transfer knowledge base / Work Mode settings from newSessionState to the actual
       // session, then clear it so nothing bleeds into the next new chat. (workingDirectories
@@ -549,26 +540,8 @@ const CopilotPicker = ({ selectedId, onSelect }: { selectedId?: string; onSelect
   const isSmallScreen = useIsSmallScreen()
   const widthFull = useUIStore((s) => s.widthFull)
   const { copilots: myCopilots } = useMyCopilots()
-  const { copilots: remoteCopilots } = useRemoteCopilotsByCursor()
-
-  const copilots = useMemo(
-    () =>
-      myCopilots.length >= MAX_COPILOTS_TO_SHOW
-        ? myCopilots
-        : [
-            ...myCopilots,
-            ...(myCopilots.length && remoteCopilots.length ? [undefined] : []),
-            ...remoteCopilots
-              .filter((c) => !myCopilots.map((mc) => mc.id).includes(c.id))
-              .slice(0, MAX_COPILOTS_TO_SHOW - myCopilots.length - 1),
-          ],
-    [myCopilots, remoteCopilots]
-  )
-
-  const showMoreButton = useMemo(
-    () => copilots.length < myCopilots.length + remoteCopilots.length,
-    [copilots.length, myCopilots.length, remoteCopilots.length]
-  )
+  const copilots = useMemo(() => myCopilots.slice(0, MAX_COPILOTS_TO_SHOW), [myCopilots])
+  const showMoreButton = myCopilots.length > copilots.length
 
   const viewportRef = useRef<HTMLDivElement>(null)
   const [scrollPosition, onScrollPositionChange] = useState({ x: 0, y: 0 })

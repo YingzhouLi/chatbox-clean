@@ -204,9 +204,7 @@ export const SkillsSection: FC = () => {
         .map((skill) => skill.name)
       const discoveredNames = new Set(discovered.map((skill) => skill.name))
       const currentSkillSettings = settingsStore.getState().skills
-      const appliedDefaultBuiltinSkillNames =
-        currentSkillSettings.appliedDefaultBuiltinSkillNames ??
-        (currentSkillSettings.builtinDefaultsInitialized ? ['chatbox-product-info'] : [])
+      const appliedDefaultBuiltinSkillNames = currentSkillSettings.appliedDefaultBuiltinSkillNames ?? []
       const newlyAddedDefaultSkillNames = defaultEnabledBuiltinSkillNames.filter(
         (name) => !appliedDefaultBuiltinSkillNames.includes(name)
       )
@@ -230,9 +228,7 @@ export const SkillsSection: FC = () => {
       })
       setSkills(sortedDiscovered)
       settingsStore.setState((state) => {
-        const appliedDefaultBuiltinSkillNames =
-          state.skills.appliedDefaultBuiltinSkillNames ??
-          (state.skills.builtinDefaultsInitialized ? ['chatbox-product-info'] : [])
+        const appliedDefaultBuiltinSkillNames = state.skills.appliedDefaultBuiltinSkillNames ?? []
         const newlyAddedDefaultSkillNames = defaultEnabledBuiltinSkillNames.filter(
           (name) => !appliedDefaultBuiltinSkillNames.includes(name)
         )

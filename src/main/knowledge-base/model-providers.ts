@@ -3,14 +3,13 @@ import { CohereClient } from 'cohere-ai'
 import { getProviderSettings } from '../../shared/models'
 import { DashScopeRerankClient, isDashScopeHost } from './dashscope-rerank-client'
 import type { CallChatCompletionOptions, ModelInterface } from '../../shared/models/types'
-import { getChatboxAPIOrigin } from '../../shared/request/chatboxai_pool'
 import { SessionSettingsSchema } from '../../shared/types'
 import { parseKnowledgeBaseModelString } from '../../shared/utils/knowledge-base-model-parser'
 import { createModel } from '../adapters'
 import { sentry } from '../adapters/sentry'
 import { cache } from '../cache'
 import { getDefaultEmbeddingModelString, getDefaultRerankModelString } from '../rag-default-models'
-import { getSettings, store } from '../store-node'
+import { getSettings } from '../store-node'
 import { getLogger } from '../util'
 import { getDatabase } from './db'
 
@@ -268,15 +267,14 @@ export async function getRerankProvider(kbId: number) {
         }
 
         const { providerId, modelId } = parsed
+        if (providerId === 'chatbox-ai') {
+          throw new Error('Chatbox AI provider is disabled in AdvancedAI')
+        }
         const sessionSettings = getMergedSettings(providerId, modelId)
         const { providerSetting, formattedApiHost } = getProviderSettings(sessionSettings, getSettings())
 
-        let apiHost = formattedApiHost
-        let token = providerSetting.apiKey
-        if (providerId === 'chatbox-ai') {
-          apiHost = getChatboxAPIOrigin()
-          token = store.get('settings.licenseKey')
-        }
+        const apiHost = formattedApiHost
+        const token = providerSetting.apiKey
 
         const client = isDashScopeHost(apiHost)
           ? new DashScopeRerankClient({ apiHost, token })

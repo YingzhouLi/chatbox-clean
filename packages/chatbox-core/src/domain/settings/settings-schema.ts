@@ -14,7 +14,7 @@ export { ModelProviderType } from '../../types/provider'
  * Document parser service type
  * - none: No parsing service, only supports basic text files (legacy mobile/web setting)
  * - local: Local parsing using built-in libraries (desktop default)
- * - chatbox-ai: Local-first parsing with Chatbox cloud fallback (mobile/web default)
+ * - chatbox-ai: Legacy value retained only for importing old settings; clean builds map it to local
  * - mineru: Third-party MinerU parsing service (desktop only)
  */
 export type DocumentParserType = 'none' | 'local' | 'chatbox-ai' | 'mineru'
@@ -332,7 +332,7 @@ const ShortcutSettingSchema = z.preprocess(
 
 const ExtensionSettingsSchema = z.object({
   webSearch: z.object({
-    provider: z.enum(['build-in', 'bing', 'tavily', 'bocha', 'querit', 'searxng']).catch('build-in'),
+    provider: z.enum(['build-in', 'bing', 'tavily', 'bocha', 'querit', 'searxng']).catch('bing'),
     tavilyApiKey: z.string().optional(),
     bochaApiKey: z.string().optional(),
     queritApiKey: z.string().optional(),

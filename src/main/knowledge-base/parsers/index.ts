@@ -1,7 +1,6 @@
 import { isTextFilePath } from '../../../shared/file-extensions'
 import type { DocumentParserConfig, DocumentParserType } from '../../../shared/types/settings'
 import { getLogger } from '../../util'
-import { ChatboxParser } from './chatbox-parser'
 import { LocalParser } from './local-parser'
 import { MineruParser } from './mineru-parser'
 import type { DocumentParser, ParserFileMeta, ParserResult } from './types'
@@ -21,7 +20,10 @@ export function createParser(config: DocumentParserConfig, kbId?: number): Docum
     case 'local':
       return new LocalParser(kbId)
     case 'chatbox-ai':
-      return new ChatboxParser()
+      // Keep the legacy type readable for imported databases, but never send
+      // document contents to the retired Chatbox cloud parser.
+      log.warn('Chatbox AI document parsing is disabled; using local parser')
+      return new LocalParser(kbId)
     case 'mineru':
       if (!config.mineru?.apiToken) {
         throw new Error('MinerU API token is required')
@@ -42,10 +44,10 @@ export function getEffectiveParserConfig(
   globalConfig?: DocumentParserConfig | null
 ): DocumentParserConfig {
   if (kbConfig) {
-    return kbConfig
+    return kbConfig.type === 'chatbox-ai' || kbConfig.type === 'none' ? { type: 'local' } : kbConfig
   }
   if (globalConfig) {
-    return globalConfig
+    return globalConfig.type === 'chatbox-ai' || globalConfig.type === 'none' ? { type: 'local' } : globalConfig
   }
   return { type: 'local' }
 }
@@ -74,11 +76,13 @@ export async function parseFileWithRouter(
     return { content, parserUsed: 'local' }
   }
 
-  // 非文本文件使用配置的解析器
-  log.debug(`[ROUTER] Using ${config.type} parser for: ${meta.filename}`)
-  const parser = createParser(config, kbId)
+  // 非文本文件使用配置的解析器。 Normalize legacy cloud values before
+  // creating the parser so metadata also records local processing.
+  const effectiveConfig = config.type === 'chatbox-ai' || config.type === 'none' ? { type: 'local' as const } : config
+  log.debug(`[ROUTER] Using ${effectiveConfig.type} parser for: ${meta.filename}`)
+  const parser = createParser(effectiveConfig, kbId)
   const content = await parser.parse(filePath, meta)
-  return { content, parserUsed: config.type }
+  return { content, parserUsed: effectiveConfig.type }
 }
 
 /**
@@ -89,7 +93,7 @@ export function getParserDisplayName(type: DocumentParserType): string {
     case 'local':
       return 'Local'
     case 'chatbox-ai':
-      return 'Chatbox AI'
+      return 'Local'
     case 'mineru':
       return 'MinerU'
     default:

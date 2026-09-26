@@ -44,8 +44,12 @@ export default class MobilePlatform extends MobileSQLiteStorage implements Platf
   // 处理深度链接
   private handleDeepLink(url: string): void {
     try {
-      // 支持 chatbox:// 和 chatbox-dev:// 两种协议（归一化处理）
-      const normalizedUrl = url.replace(/^chatbox-dev:\/\//, 'chatbox://')
+      // Keep compatibility with chatbox:// while accepting AdvancedAI's
+      // preferred scheme (and the development variants).
+      const normalizedUrl = url
+        .replace(/^chatbox-dev:\/\//, 'chatbox://')
+        .replace(/^advancedai-dev:\/\//, 'advancedai://')
+        .replace(/^advancedai:\/\//, 'chatbox://')
       const parsedUrl = new URL(normalizedUrl)
 
       // 处理 provider 导入链接: chatbox://provider/import?config=<base64-encoded-config>

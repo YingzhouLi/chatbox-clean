@@ -474,7 +474,7 @@ export function RouteComponent() {
           <Title order={5}>{t('Error Reporting')}</Title>
           <Text c="chatbox-tertiary">
             {t(
-              'Chatbox respects your privacy and only uploads anonymous error data and events when necessary. You can change your preferences at any time in the settings.'
+              'AdvancedAI respects your privacy and only uploads anonymous error data and events when necessary. You can change your preferences at any time in the settings.'
             )}
           </Text>
         </Stack>
@@ -605,7 +605,7 @@ const ImportExportDataSection = () => {
       case 'resource-read-failed':
         return t('Managed attachment or image data could not be read and was not included.')
       case 'external-resource-skipped':
-        return t('The original external file is not managed by Chatbox and was not included.')
+        return t('The original external file is not managed by AdvancedAI and was not included.')
       case 'rag-rebuild-failed':
         return t('The attachment search index could not be restored.')
     }
@@ -800,7 +800,7 @@ const ImportExportDataSection = () => {
           setImportTips(
             String(
               t(
-                'Backup restore is almost complete, with {{count}} warning(s). Select Continue to restart Chatbox and finish restoring.',
+                'Backup restore is almost complete, with {{count}} warning(s). Select Continue to restart AdvancedAI and finish restoring.',
                 {
                   count: result.warnings.length,
                 }
@@ -875,7 +875,7 @@ const ImportExportDataSection = () => {
           {t('ZIP backups include each conversation and its managed images and attachments.')}
         </Text>
         <Text size="sm" c="chatbox-tertiary">
-          {t('Backup files exported here can only be imported in Chatbox 1.22 or later.')}
+          {t('Backup files exported here can only be imported in AdvancedAI 1.22 or later.')}
         </Text>
         {[
           { label: t('Settings'), value: ExportDataItem.Setting },

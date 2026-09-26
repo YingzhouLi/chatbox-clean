@@ -12,16 +12,14 @@ const ALL_PARSER_OPTIONS: {
   desktopOnly?: boolean
 }[] = [
   { value: 'local', label: 'Local', desktopOnly: true }, // Only available on desktop
-  { value: 'chatbox-ai', label: 'Chatbox AI' },
   { value: 'mineru', label: 'MinerU', desktopOnly: true }, // Only available on desktop (requires IPC)
 ]
 
 const PARSER_DESCRIPTIONS: Record<DocumentParserType, string> = {
-  none: 'Only supports basic text files (.txt, .md, .json, code files, etc.). For PDF and Office files, please switch to Chatbox AI.',
+  none: 'Only supports basic text files (.txt, .md, .json, code files, etc.). Select a supported parser for other files.',
   local:
     'Uses built-in document parsing feature, supports common file types. Free usage, no compute points will be consumed.',
-  'chatbox-ai':
-    'Tries local parsing first without consuming compute points. If local parsing fails, Chatbox AI cloud parsing will be used and compute points will be consumed.',
+  'chatbox-ai': 'Uses built-in local document parsing.',
   mineru: 'Third-party cloud parsing service, supports PDF and most Office files. Requires API token.',
 }
 
@@ -50,7 +48,12 @@ export function DocumentParserSettings({ showTitle = true }: DocumentParserSetti
   }, [])
 
   const storedParserType = documentParser?.type || getPlatformDefaultDocumentParser().type
-  const currentParserType = storedParserType === 'none' ? getPlatformDefaultDocumentParser().type : storedParserType
+  // Older snapshots may contain Chatbox's cloud parser. Treat those values as
+  // local so the UI cannot trigger a remote Chatbox request.
+  const currentParserType =
+    storedParserType === 'none' || storedParserType === 'chatbox-ai'
+      ? getPlatformDefaultDocumentParser().type
+      : storedParserType
 
   const handleParserTypeChange = useCallback(
     (value: string | null) => {

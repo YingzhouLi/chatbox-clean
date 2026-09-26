@@ -16,6 +16,7 @@ import { getDefaultStore } from 'jotai'
 import { difference, intersection, keyBy, uniq } from 'lodash'
 import oldStore from 'store'
 import { v4 as uuidv4 } from 'uuid'
+import { ADVANCEDAI_DEFAULT_MODEL_ID, ADVANCEDAI_PROVIDER_ID } from '@shared/defaults'
 import {
   artifactSessionCN,
   artifactSessionEN,
@@ -439,24 +440,26 @@ async function migrate_9_to_10(dataStore: MigrateStore): Promise<boolean> {
       if (session.id) {
         const oldSessionSettings = (session.settings || {}) as any
         const sessionProvider: ModelProvider = oldSessionSettings.aiProvider ?? oldSettings.aiProvider
+        const normalizedSessionProvider: ModelProvider =
+          sessionProvider === ModelProviderEnum.ChatboxAI ? ADVANCEDAI_PROVIDER_ID : sessionProvider
         const modelKey = LEGACY_PROVIDER_MODEL_KEYS[sessionProvider]
         const modelId: string = oldSessionSettings[modelKey!] ?? oldSettings[modelKey!]
         session.settings =
           session.type === 'chat'
             ? {
-                provider: sessionProvider,
+                provider: normalizedSessionProvider,
                 modelId,
                 maxContextMessageCount: oldSessionSettings.maxContextMessageCount ?? oldSettings.maxContextMessageCount,
                 temperature: oldSessionSettings.temperature ?? oldSettings.temperature,
                 topP: oldSessionSettings.topP ?? oldSettings.topP,
               }
             : {
-                provider: [ModelProviderEnum.ChatboxAI, ModelProviderEnum.OpenAI, ModelProviderEnum.Azure].includes(
+                provider: [ModelProviderEnum.OpenAI, ModelProviderEnum.Azure].includes(
                   oldSettings.aiProvider
                 )
                   ? oldSettings.aiProvider
-                  : ModelProviderEnum.ChatboxAI,
-                modelId: 'DALL-E-3',
+                  : ADVANCEDAI_PROVIDER_ID,
+                modelId: ADVANCEDAI_DEFAULT_MODEL_ID,
                 imageGenerateNum: oldSessionSettings.imageGenerateNum ?? 3,
                 dalleStyle: oldSessionSettings.dalleStyle ?? 'vivid',
               }
@@ -569,8 +572,11 @@ async function migrate_13_to_14(dataStore: MigrateStore) {
           generatedImages,
           createdAt: assistantMsg.timestamp || Date.now(),
           model: {
-            provider: session.settings?.provider || ModelProviderEnum.ChatboxAI,
-            modelId: session.settings?.modelId || 'DALL-E-3',
+            provider:
+              session.settings?.provider === ModelProviderEnum.ChatboxAI
+                ? ADVANCEDAI_PROVIDER_ID
+                : session.settings?.provider || ADVANCEDAI_PROVIDER_ID,
+            modelId: session.settings?.modelId || ADVANCEDAI_DEFAULT_MODEL_ID,
           },
           dalleStyle: session.settings?.dalleStyle,
           imageGenerateNum: session.settings?.imageGenerateNum,

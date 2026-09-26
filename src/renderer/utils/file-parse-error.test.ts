@@ -1,15 +1,11 @@
 import { CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR } from '@shared/file-parse-errors'
 import { describe, expect, test } from 'vitest'
-import { CHATBOX_AI_PARSER_SIGN_IN_ONLY_I18N_KEY, getFileParseErrorI18nKey } from './file-parse-error'
+import { getFileParseErrorI18nKey } from './file-parse-error'
 
 describe('getFileParseErrorI18nKey', () => {
-  test('offers parser alternatives only on desktop-like platforms', () => {
-    expect(getFileParseErrorI18nKey(CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR, false)).toBe(
-      CHATBOX_AI_PARSER_SIGN_IN_ONLY_I18N_KEY
-    )
-    expect(getFileParseErrorI18nKey(CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR, true)).toContain(
-      '<OpenDocumentParserSettingButton>document parser</OpenDocumentParserSettingButton>'
-    )
+  test('does not expose Chatbox sign-in or parser alternatives', () => {
+    expect(getFileParseErrorI18nKey(CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR, false)).toBeUndefined()
+    expect(getFileParseErrorI18nKey(CHATBOX_AI_PARSER_LICENSE_KEY_REQUIRED_ERROR, true)).toBeUndefined()
   })
 
   test('uses the registered error key for other file parsing failures', () => {

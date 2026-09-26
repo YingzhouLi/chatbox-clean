@@ -16,7 +16,6 @@ export interface NativeWebSearchResultItem {
 export type NativeWebSearchProvider = 'build-in' | 'bing' | 'tavily' | 'bocha' | 'querit'
 
 export const nativeWebSearchProviderOptions: Array<{ id: NativeWebSearchProvider; label: string }> = [
-  { id: 'build-in', label: 'Chatbox AI' },
   { id: 'bing', label: 'Bing Search' },
   { id: 'tavily', label: 'Tavily' },
   { id: 'bocha', label: 'BoCha' },
@@ -30,11 +29,10 @@ export interface NativeWebSearchSettings {
   apiHost: string
 }
 
-// Web parity (defaults.ts extension.webSearch.provider): the Chatbox search API
-// is the default. Bare Bing scraping is unreliable from native HTTP clients --
-// without a real browser UA/cookies Bing serves a JS shell with zero results.
+// Keep native defaults aligned with the clean desktop build. The legacy
+// `build-in` value is normalized to Bing and never reaches the Chatbox API.
 export const defaultNativeWebSearchSettings: NativeWebSearchSettings = {
-  provider: 'build-in',
+  provider: 'bing',
   apiKey: '',
   apiHost: '',
 }
@@ -42,9 +40,13 @@ export const defaultNativeWebSearchSettings: NativeWebSearchSettings = {
 export function normalizeNativeWebSearchSettings(
   settings: Partial<NativeWebSearchSettings> | undefined
 ): NativeWebSearchSettings {
-  const provider = nativeWebSearchProviderOptions.some((option) => option.id === settings?.provider)
-    ? (settings?.provider as NativeWebSearchProvider)
-    : defaultNativeWebSearchSettings.provider
+  const storedProvider = settings?.provider
+  const provider =
+    storedProvider === 'build-in'
+      ? 'bing'
+      : nativeWebSearchProviderOptions.some((option) => option.id === storedProvider)
+        ? (storedProvider as NativeWebSearchProvider)
+        : defaultNativeWebSearchSettings.provider
   return {
     enabled: settings?.enabled,
     provider,
@@ -86,22 +88,22 @@ interface TavilyResponseItem {
 
 export function hasNativeWebSearchConfiguration(
   settings: Pick<NativeWebSearchSettings, 'provider' | 'apiKey'>,
-  licenseKey?: string
+  _licenseKey?: string
 ): boolean {
   if (settings.provider === 'tavily' || settings.provider === 'bocha' || settings.provider === 'querit') {
     return Boolean(settings.apiKey.trim())
   }
-  if (settings.provider === 'build-in') return Boolean(licenseKey?.trim())
+  // Raw legacy values remain reportable for callers that have not normalized
+  // settings yet, but they are never sent to the Chatbox endpoint.
+  if (settings.provider === 'build-in') return true
   return true // bing needs no credentials
 }
 
-export async function searchNativeWeb(
-  query: string,
-  options: NativeWebSearchOptions
-): Promise<NativeWebSearchResultItem[]> {
+export function searchNativeWeb(query: string, options: NativeWebSearchOptions): Promise<NativeWebSearchResultItem[]> {
   const provider = options.provider ?? 'tavily'
   if (provider === 'bing') return searchNativeBing(query, options)
-  if (provider === 'build-in') return searchNativeChatbox(query, options)
+  // A legacy value must never invoke the Chatbox endpoint.
+  if (provider === 'build-in') return searchNativeBing(query, options)
   if (provider === 'bocha') return searchNativeBocha(query, options)
   if (provider === 'querit') return searchNativeQuerit(query, options)
   return searchNativeTavily(query, options)

@@ -62,7 +62,7 @@ export function migrateSettings(persisted: unknown, version: number, host: Setti
   if (shouldRunMigration(4)) {
     const extension = settings.extension as { documentParser?: { type?: string } } | undefined
     if (!host.isDesktopLike && extension?.documentParser?.type === 'none') {
-      extension.documentParser.type = 'chatbox-ai'
+      extension.documentParser.type = 'local'
     }
   }
 
@@ -73,7 +73,18 @@ export function migrateSettings(persisted: unknown, version: number, host: Setti
     }
   }
 
-  const extension = settings.extension as { documentParser?: { type?: string } } | undefined
+  const extension = settings.extension as
+    | {
+        documentParser?: { type?: string }
+        webSearch?: { provider?: string }
+      }
+    | undefined
+  if (extension?.documentParser?.type === 'chatbox-ai' || extension?.documentParser?.type === 'none') {
+    extension.documentParser.type = 'local'
+  }
+  if (extension?.webSearch?.provider === 'build-in') {
+    extension.webSearch.provider = 'bing'
+  }
   if (!extension?.documentParser) {
     settings.extension = {
       ...extension,

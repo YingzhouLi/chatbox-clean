@@ -8,7 +8,6 @@ import {
   IconCirclePlus,
   IconCode,
   IconDownload,
-  IconHelpCircle,
   IconInfoCircle,
   IconLayoutSidebarLeftCollapse,
   IconMessageChatbot,
@@ -183,7 +182,7 @@ export default function Sidebar() {
             >
               <Image src={icon} w={20} h={20} />
               <Text span c="chatbox-secondary" size="xl" lh={1.2} fw="700" truncate>
-                Chatbox
+                AdvancedAI
               </Text>
               {/* Desktop shows the version in the bottom About link, so only surface it here on mobile */}
               {isSmallScreen && /\d/.test(versionHook.version) && (
@@ -280,19 +279,6 @@ export default function Sidebar() {
                 p="xs"
               />
 
-              {!versionHook.isExceeded && (
-                <ActionIcon
-                  variant="transparent"
-                  color="chatbox-secondary"
-                  size={24}
-                  onClick={() => {
-                    navigate({ to: '/guide' })
-                    setShowSidebar(false)
-                  }}
-                >
-                  <ScalableIcon icon={IconHelpCircle} size={20} />
-                </ActionIcon>
-              )}
               <ActionIcon
                 data-testid={TestId.sidebar.settingsTrigger}
                 variant="transparent"
@@ -336,17 +322,6 @@ export default function Sidebar() {
                 variant="light"
                 p="xs"
               />
-              {!versionHook.isExceeded && (
-                <NavLink
-                  c="chatbox-secondary"
-                  className="rounded-lg"
-                  label={t('Help')}
-                  leftSection={<ScalableIcon icon={IconHelpCircle} size={20} />}
-                  onClick={() => navigate({ to: '/guide' })}
-                  variant="light"
-                  p="xs"
-                />
-              )}
               {FORCE_ENABLE_DEV_PAGES && (
                 <NavLink
                   c="chatbox-secondary"

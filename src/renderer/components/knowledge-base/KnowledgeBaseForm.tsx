@@ -119,7 +119,6 @@ interface KnowledgeBaseProviderModeSelectProps {
 export const KnowledgeBaseProviderModeSelect: React.FC<KnowledgeBaseProviderModeSelectProps> = ({
   value,
   onChange,
-  isChatboxAIDisabled = false,
 }) => {
   const { t } = useTranslation()
 
@@ -130,7 +129,8 @@ export const KnowledgeBaseProviderModeSelect: React.FC<KnowledgeBaseProviderMode
       onChange={(value) => onChange(value as 'chatbox-ai' | 'custom')}
     >
       <Group mt="xs">
-        <Radio value="chatbox-ai" label="Chatbox AI" disabled={isChatboxAIDisabled} />
+        {/* The legacy Chatbox AI provider remains in the type for database
+            compatibility, but is intentionally absent from the AdvancedAI UI. */}
         <Radio value="custom" label={t('Custom')} />
       </Group>
     </Radio.Group>
@@ -235,6 +235,10 @@ const PARSER_OPTIONS: { value: DocumentParserType; label: string; description: s
   },
 ]
 
+// Keep the legacy option above readable for imported settings, but never expose
+// the retired Chatbox cloud parser as a selectable parser in AdvancedAI.
+const AVAILABLE_PARSER_OPTIONS = PARSER_OPTIONS.filter((option) => option.value !== 'chatbox-ai')
+
 interface DocumentParserSelectorProps {
   parserConfig: DocumentParserConfig
   onParserConfigChange: (config: DocumentParserConfig) => void
@@ -308,18 +312,20 @@ export const DocumentParserSelector: React.FC<DocumentParserSelectorProps> = ({
     }
   }, [mineruToken, t])
 
-  const selectedOption = PARSER_OPTIONS.find((opt) => opt.value === parserConfig.type)
+  const selectedParserType =
+    parserConfig.type === 'chatbox-ai' || parserConfig.type === 'none' ? 'local' : parserConfig.type
+  const selectedOption = AVAILABLE_PARSER_OPTIONS.find((opt) => opt.value === selectedParserType)
 
   return (
     <Stack gap="xs">
       <Select
         label={t('Document Parser')}
         description={t('Parser used to process uploaded documents')}
-        data={PARSER_OPTIONS.map((opt) => ({
+        data={AVAILABLE_PARSER_OPTIONS.map((opt) => ({
           value: opt.value,
           label: t(opt.label),
         }))}
-        value={parserConfig.type}
+        value={selectedParserType}
         onChange={handleParserTypeChange}
         allowDeselect={false}
         disabled={disabled}
@@ -331,7 +337,7 @@ export const DocumentParserSelector: React.FC<DocumentParserSelectorProps> = ({
         </Text>
       )}
 
-      {parserConfig.type === 'mineru' && !disabled && (
+      {selectedParserType === 'mineru' && !disabled && (
         <Stack gap="xs">
           <PasswordInput
             placeholder={t('Enter your MinerU API token') as string}
@@ -380,13 +386,13 @@ interface DocumentParserDisplayProps {
 
 export const DocumentParserDisplay: React.FC<DocumentParserDisplayProps> = ({ parserType }) => {
   const { t } = useTranslation()
-  const currentType = parserType || 'local'
+  const currentType = parserType === 'chatbox-ai' || parserType === 'none' || !parserType ? 'local' : parserType
 
   return (
     <Select
       label={t('Document Parser')}
       description={t('Parser used to process uploaded documents')}
-      data={PARSER_OPTIONS.map((opt) => ({
+      data={AVAILABLE_PARSER_OPTIONS.map((opt) => ({
         value: opt.value,
         label: t(opt.label),
       }))}

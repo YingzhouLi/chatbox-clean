@@ -13,7 +13,6 @@ import { languageNameMap } from '@/i18n/locales'
 import { mcpController } from '@/packages/mcp/controller'
 import { generateCommandExplanation } from '@/packages/model-calls/command-explanation'
 import { buildAgentMemoryTools } from '@/packages/model-calls/toolsets/agent-memory'
-import { buildChatboxCliToolSet } from '@/packages/model-calls/toolsets/chatbox-cli'
 import { buildCodeExecutionTools } from '@/packages/model-calls/toolsets/code-execution'
 import fileToolSet from '@/packages/model-calls/toolsets/file'
 import { buildFilesystemTools } from '@/packages/model-calls/toolsets/filesystem'
@@ -573,14 +572,6 @@ When you create a Git commit that includes code changes, append this exact trail
       sandboxWorkingDirectory
     )
     tools.load_skill = buildLoadSkillTool(options)
-    if (enabledSkills.some((skill) => skill.name === 'chatbox-product-info')) {
-      const chatboxCliToolSet = buildChatboxCliToolSet({
-        sessionId: options.sessionId,
-        onUsed: options.onAgentModeActivated,
-      })
-      instructions += chatboxCliToolSet.description
-      tools = { ...tools, ...chatboxCliToolSet.tools }
-    }
     if (legacyCommandTools) tools.user_exec = buildUserExecTool(options)
     if (codeExecution) {
       tools.install_skill = buildInstallSkillTool(

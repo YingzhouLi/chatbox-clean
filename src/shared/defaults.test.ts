@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { chatSessionSettings, getDefaultPrompt, newConfigs, pictureSessionSettings, settings } from './defaults'
 import { DEFAULT_INTERFACE_COLORS } from './theme-colors'
-import { ModelProviderEnum, type SessionSettings, type Settings, SettingsSchema, Theme } from './types'
+import { type SessionSettings, type Settings, SettingsSchema, Theme } from './types'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -116,15 +116,15 @@ describe('defaults', () => {
   it('chatSessionSettings() returns provider and modelId', () => {
     const result: SessionSettings = chatSessionSettings()
 
-    expect(result.provider).toBe(ModelProviderEnum.ChatboxAI)
-    expect(result.modelId).toBe('chatboxai-4')
+    expect(result.provider).toBe('advancedsolver-one-api')
+    expect(result.modelId).toBe('gpt-6-sol')
   })
 
   it('pictureSessionSettings() returns provider, modelId, dalleStyle, imageGenerateNum', () => {
     const result: SessionSettings = pictureSessionSettings()
 
-    expect(result.provider).toBe(ModelProviderEnum.ChatboxAI)
-    expect(result.modelId).toBe('DALL-E-3')
+    expect(result.provider).toBe('advancedsolver-one-api')
+    expect(result.modelId).toBe('gpt-6-sol')
     expect(result.dalleStyle).toBe('vivid')
     expect(result.imageGenerateNum).toBe(1)
   })

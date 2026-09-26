@@ -1,0 +1,80 @@
+name: Build AdvancedAI installers
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: advancedai-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} installer
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            os: macos-14
+            target: mac
+            artifact: advancedai-macos
+          - platform: Windows
+            os: windows-latest
+            target: win
+            artifact: advancedai-windows
+          - platform: Linux
+            os: ubuntu-24.04
+            target: linux
+            artifact: advancedai-linux
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build installer
+        env:
+          # AdvancedAI is intentionally distributed unsigned until a
+          # platform-specific signing certificate is configured.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_LINK: ''
+          CSC_KEY_PASSWORD: ''
+          WIN_CSC_LINK: ''
+          WIN_CSC_KEY_PASSWORD: ''
+        run: pnpm run package -- --${{ matrix.target }}
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-${{ github.sha }}
+          path: |
+            release/build/*.dmg
+            release/build/*.zip
+            release/build/*.exe
+            release/build/*.AppImage
+            release/build/*.deb
+          if-no-files-found: error
+          retention-days: 14

@@ -1,5 +1,5 @@
-import { type ChatboxAILicenseDetail, ModelProviderEnum, type Session } from '@shared/types'
-import { isChatboxAILowTierPlan } from './licensePlan'
+import { type ChatboxAILicenseDetail, type Session } from '@shared/types'
+import { ADVANCEDAI_DEFAULT_MODEL_ID, ADVANCEDAI_PROVIDER_ID } from '@shared/defaults'
 
 export type ChatboxLicenseDefaultModelId = NonNullable<ChatboxAILicenseDetail['defaultModel']>
 
@@ -17,35 +17,14 @@ export type DefaultChatModelSelection = {
   modelId: string
 }
 
-const CHATBOX_AI_35_MODEL_ID: ChatboxLicenseDefaultModelId = 'chatboxai-3.5'
-const CHATBOX_AI_4_MODEL_ID: ChatboxLicenseDefaultModelId = 'chatboxai-4'
-
-function isChatboxLicenseDefaultModelId(value: string | undefined): value is ChatboxLicenseDefaultModelId {
-  return value === CHATBOX_AI_35_MODEL_ID || value === CHATBOX_AI_4_MODEL_ID
-}
-
 export function resolveChatboxLicenseDefaultModel(
-  settings: ChatboxDefaultModelSettings
+  _settings: ChatboxDefaultModelSettings
 ): DefaultChatModelSelection | undefined {
-  if (!settings.licenseKey || settings.hasExpiredLicense) {
-    return undefined
-  }
-
-  const licenseModel = settings.licenseDetail?.defaultModel ?? settings.licenseDetail?.type
-  if (isChatboxLicenseDefaultModelId(licenseModel)) {
-    return {
-      provider: ModelProviderEnum.ChatboxAI,
-      modelId: licenseModel,
-    }
-  }
-
-  const modelId = isChatboxAILowTierPlan(settings.licenseDetail, settings.licensePlanName)
-    ? CHATBOX_AI_35_MODEL_ID
-    : CHATBOX_AI_4_MODEL_ID
-
+  // Keep this compatibility function because existing session initialization
+  // calls it, but never derive a model from a Chatbox AI license in AdvancedAI.
   return {
-    provider: ModelProviderEnum.ChatboxAI,
-    modelId,
+    provider: ADVANCEDAI_PROVIDER_ID,
+    modelId: ADVANCEDAI_DEFAULT_MODEL_ID,
   }
 }
 

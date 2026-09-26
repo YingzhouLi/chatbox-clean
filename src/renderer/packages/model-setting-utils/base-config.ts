@@ -1,10 +1,11 @@
 import { getProviderDefinition } from '../../../shared/providers'
-import type {
-  ModelProvider,
-  ProviderBaseInfo,
-  ProviderModelInfo,
-  ProviderSettings,
-  SessionType,
+import {
+  type ModelProvider,
+  ModelProviderEnum,
+  type ProviderBaseInfo,
+  type ProviderModelInfo,
+  type ProviderSettings,
+  type SessionType,
 } from '../../../shared/types'
 import {
   enrichModelsFromRegistry,
@@ -27,6 +28,9 @@ export default abstract class BaseConfig implements ModelSettingUtil {
   protected abstract listProviderModels(settings: ProviderSettings): Promise<ProviderModelInfo[]>
 
   private async listRemoteProviderModels(): Promise<ProviderModelInfo[]> {
+    if (this.provider === ModelProviderEnum.ChatboxAI) {
+      return []
+    }
     return await remote
       .getModelManifest({
         aiProvider: this.provider,

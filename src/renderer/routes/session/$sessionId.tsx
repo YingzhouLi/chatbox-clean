@@ -19,7 +19,6 @@ import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import useVersion from '@/hooks/useVersion'
 import { defaultSessionsForCN, defaultSessionsForEN } from '@/packages/initial_data'
-import * as remote from '@/packages/remote'
 import {
   sessionStartupRecovery,
   useSessionStartupGuard,
@@ -167,11 +166,6 @@ function RouteComponent() {
     if (!currentSession) return
     const rollback = await startNewThread(currentSession.id)
     if (!rollback) return
-    if (currentSession.copilotId) {
-      void remote
-        .recordCopilotUsage({ id: currentSession.copilotId, action: 'create_thread' })
-        .catch((error) => console.warn('[recordCopilotUsage] failed', error))
-    }
     return rollback
   }, [currentSession])
 
@@ -188,12 +182,6 @@ function RouteComponent() {
         })
       }
       messageListRef.current?.scrollToBottom('instant')
-
-      if (currentSession.copilotId) {
-        void remote
-          .recordCopilotUsage({ id: currentSession.copilotId, action: 'create_message' })
-          .catch((error) => console.warn('[recordCopilotUsage] failed', error))
-      }
 
       await submitNewUserMessage(currentSession.id, {
         newUserMsg: constructedMessage,

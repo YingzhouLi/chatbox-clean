@@ -13,6 +13,11 @@ const log = getLogger('skills:builtin-sync')
 const MANIFEST_FILE = 'manifest.json'
 const FETCH_TIMEOUT_MS = 10_000
 
+// The upstream Chatbox product skill is intentionally kept in the source tree
+// for GPL/source compatibility, but must never be seeded, synced, or exposed
+// by the AdvancedAI build.
+const DISABLED_BUILTIN_SKILL_NAMES = new Set(['chatbox-product-info'])
+
 interface SnapshotEntry {
   version: number
   hash: string
@@ -305,6 +310,7 @@ export async function syncBuiltinSkills(lang?: string): Promise<boolean> {
 
   for (const item of remote.data) {
     if (!item?.name || typeof item.hash !== 'string') continue
+    if (DISABLED_BUILTIN_SKILL_NAMES.has(item.name)) continue
     // 安全：name 会被用作快照目录路径，必须校验，防止后端异常/被篡改的 name（如 "../foo"）
     // 导致 writeSnapshotSkill 写到快照目录之外
     if (!isValidSkillName(item.name)) {
@@ -366,6 +372,7 @@ export function discoverBuiltinSkills(): SkillInfo[] {
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
+    if (DISABLED_BUILTIN_SKILL_NAMES.has(entry.name)) continue
     const skillMdPath = path.join(dir, entry.name, 'SKILL.md')
     if (!fs.existsSync(skillMdPath)) continue
 

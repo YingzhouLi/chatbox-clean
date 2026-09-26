@@ -1,10 +1,10 @@
-import { Button, Flex, Grid, Stack, Text } from '@mantine/core'
+import { Grid, Stack, Text } from '@mantine/core'
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { useMyCopilots, useRemoteCopilotsByCursor } from '@/hooks/useCopilots'
+import { useMyCopilots } from '@/hooks/useCopilots'
 import CopilotItem from './-components/CopilotItem'
 
 const searchSchema = z.object({
@@ -15,8 +15,6 @@ export const Route = createFileRoute('/copilots/search' as never)({
   component: CopilotSearch,
   validateSearch: zodValidator(searchSchema),
 })
-
-const PAGE_SIZE = 18
 
 function CopilotSearch() {
   const { t } = useTranslation()
@@ -35,17 +33,6 @@ function CopilotSearch() {
     )
   }, [myCopilots, normalizedTerm])
 
-  const {
-    copilots: remoteCopilots,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useRemoteCopilotsByCursor({
-    search: normalizedTerm || undefined,
-    limit: PAGE_SIZE,
-  })
-
   return (
     <Stack px="sm" py="xl" gap="lg" className="max-w-7xl">
       {filteredMyCopilots.length > 0 && (
@@ -62,49 +49,13 @@ function CopilotSearch() {
         </Stack>
       )}
 
-      <Stack gap="md">
-        <Text>{t('Chatbox Featured')}</Text>
-
-        {isLoading && (
-          <div className="py-12 text-center">
-            <Text c="dimmed" size="sm">
-              {t('Loading...')}
-            </Text>
-          </div>
-        )}
-
-        {!isLoading && normalizedTerm && remoteCopilots.length === 0 && (
-          <div className="py-12 text-center">
-            <Text c="dimmed" size="sm">
-              {t('No copilots matched your search.')}
-            </Text>
-          </div>
-        )}
-
-        {!isLoading && remoteCopilots.length > 0 && (
-          <Grid gutter="xs" align="stretch">
-            {remoteCopilots.map((copilot) => (
-              <Grid.Col span={{ base: 12, md: 6, lg: 4, xl: 3 }} key={copilot.id}>
-                <CopilotItem copilot={copilot} type="remote" highlightTerm={term} />
-              </Grid.Col>
-            ))}
-          </Grid>
-        )}
-
-        {hasNextPage && (
-          <Flex justify="center" className="pt-sm">
-            <Button
-              variant="outline"
-              color="chatbox-brand"
-              size="sm"
-              onClick={() => fetchNextPage()}
-              loading={isFetchingNextPage}
-            >
-              {t('Load More')}
-            </Button>
-          </Flex>
-        )}
-      </Stack>
+      {filteredMyCopilots.length === 0 && (
+        <div className="py-12 text-center">
+          <Text c="dimmed" size="sm">
+            {term ? t('No copilots matched your search.') : t('No copilots yet. Create your first one!')}
+          </Text>
+        </div>
+      )}
     </Stack>
   )
 }

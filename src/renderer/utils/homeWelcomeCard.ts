@@ -7,19 +7,7 @@ export function getHomeWelcomeCardMode(params: {
   hasExpiredLicense: boolean
   hideForStoreReview?: boolean
 }): HomeWelcomeCardMode {
-  const { providerCount, isLoggedIn, hasLicense, hasExpiredLicense, hideForStoreReview } = params
-
-  if (hideForStoreReview) {
-    return 'none'
-  }
-
-  if (providerCount > 0 || hasLicense) {
-    return 'none'
-  }
-
-  if (isLoggedIn) {
-    return hasExpiredLicense ? 'expired-license' : 'no-license'
-  }
-
-  return 'login'
+  // AdvancedAI does not expose Chatbox AI account, license, or upgrade prompts.
+  void params
+  return 'none'
 }

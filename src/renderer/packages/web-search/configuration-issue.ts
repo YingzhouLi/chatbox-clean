@@ -17,11 +17,13 @@ export type WebSearchConfigurationIssue =
 
 export function getWebSearchConfigurationIssue(
   configuration: WebSearchConfiguration,
-  licenseKey?: string
+  _licenseKey?: string
 ): WebSearchConfigurationIssue | null {
   switch (configuration.provider) {
     case 'build-in':
-      return licenseKey ? null : 'chatbox-ai-sign-in'
+      // Legacy persisted value is handled as Bing by the executor. Keep it
+      // usable here without requiring a Chatbox license.
+      return null
     case 'tavily':
       return configuration.tavilyApiKey ? null : 'tavily-api-key'
     case 'bocha':

@@ -288,10 +288,10 @@ async function processPendingFiles() {
       }
 
       // Get effective parser config
-      // When useRemoteParsing is true (user clicked "Retry with server parsing"), force use Chatbox AI parser
-      // This overrides the KB's configured parser to ensure server parsing is used
+      // Legacy retries may still carry use_remote_parsing from an older build.
+      // AdvancedAI has no Chatbox cloud parser, so process those files locally.
       const effectiveParserConfig: DocumentParserConfig = useRemoteParsing
-        ? { type: 'chatbox-ai' }
+        ? { type: 'local' }
         : getEffectiveParserConfig(kbParserConfig)
 
       try {
@@ -303,7 +303,7 @@ async function processPendingFiles() {
         // We set parser_type here at the start so that if parsing fails, the error message will correctly show which parser was used
         await db.execute({
           sql: 'UPDATE kb_file SET status = ?, processing_started_at = CURRENT_TIMESTAMP, use_remote_parsing = 0, parsed_remotely = ?, parser_type = ? WHERE id = ?',
-          args: ['processing', useRemoteParsing ? 1 : 0, effectiveParserConfig.type, file.id],
+          args: ['processing', 0, effectiveParserConfig.type, file.id],
         })
 
         // Use mastra to parse, chunk, embed, and store (supports resuming from chunk_count)

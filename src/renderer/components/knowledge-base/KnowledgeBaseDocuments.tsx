@@ -42,8 +42,6 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { trackJkClickEvent } from '@/analytics/jk'
-import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
 import { bucketPlausibleCount } from '@/analytics/plausible'
 import { AppTooltip as Tooltip } from '@/components/ui/tooltip'
 import { useKnowledgeBaseFiles, useKnowledgeBaseFilesActions, useKnowledgeBaseFilesCount } from '@/hooks/knowledge-base'
@@ -53,9 +51,6 @@ import platform from '@/platform'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { trackEvent } from '@/utils/track'
 import ChunksPreviewModal from './ChunksPreviewModal'
-import { KnowledgeBaseFileErrorButton } from './KnowledgeBaseFileErrorButton'
-import { isChatboxAIParserLicenseRequired } from './knowledge-base-file-error'
-import { RemoteRetryModal } from './RemoteRetryModal'
 
 interface KnowledgeBaseDocumentsProps {
   knowledgeBase: KnowledgeBase | null
@@ -72,7 +67,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   const [showScrollIndicator, setShowScrollIndicator] = useState(true)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showUploadArea, setShowUploadArea] = useState(false)
-  const [showRemoteRetryModal, setShowRemoteRetryModal] = useState(false)
   const [sizeRejectedFiles, setSizeRejectedFiles] = useState<RejectedFile[]>([])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -117,24 +111,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
     return () => clearInterval(pollInterval)
   }, [knowledgeBase?.id, allFiles, refetch, refetchCount])
-
-  // Failed files for remote retry feature
-  const failedFiles = useMemo(() => allFiles.filter((file) => file.status === 'failed'), [allFiles])
-
-  // Parser types that should NOT show the "use Chatbox AI" suggestion when they fail
-  const PARSER_NO_SUGGESTION_LIST: string[] = ['mineru', 'chatbox-ai']
-
-  // Check if we should show the Chatbox AI suggestion for failed files
-  // Show suggestion only if there are failed files that are NOT in the exception list
-  const shouldShowChatboxAISuggestion = useMemo(() => {
-    if (failedFiles.length === 0) return false
-    // Check if any failed file used a parser that should show the suggestion
-    return failedFiles.some(
-      (file) =>
-        file.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR &&
-        !PARSER_NO_SUGGESTION_LIST.includes(file.parser_type || 'local')
-    )
-  }, [failedFiles])
 
   // MIME type correction for Windows compatibility
   const correctMimeType = useCallback((file: File): FileMeta => {
@@ -206,7 +182,8 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   // Get supported file types
   const getSupportedFileTypes = useCallback(() => {
     const effectiveParserType = knowledgeBase?.documentParser?.type || globalDocumentParserType || 'local'
-    const isLocalParser = effectiveParserType === 'local'
+    const isLocalParser =
+      effectiveParserType === 'local' || effectiveParserType === 'chatbox-ai' || effectiveParserType === 'none'
 
     const baseDocumentTypes = ['.pdf', '.docx', '.txt', '.md', '.rtf', '.pptx', '.xlsx', '.csv', '.epub']
     const extendedDocumentTypes = ['.doc', '.ppt', '.xls']
@@ -475,10 +452,12 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
   // Handle file retry
   const handleRetryFile = useCallback(
-    async (fileId: number, useRemoteParsing = false) => {
+    async (fileId: number) => {
       try {
         const knowledgeBaseController = platform.getKnowledgeBaseController()
-        await knowledgeBaseController.retryFile(fileId, useRemoteParsing)
+        // AdvancedAI always retries with its local parser. The legacy remote
+        // parsing argument is intentionally never enabled.
+        await knowledgeBaseController.retryFile(fileId, false)
         if (knowledgeBase?.id) {
           // Refresh data to show updated status
           refetch()
@@ -589,7 +568,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
     }
   }
 
-  const getStatusIcon = (status: string, error?: string, parserType?: string, fileName?: string) => {
+  const getStatusIcon = (status: string, error?: string, parserType?: string) => {
     switch (status) {
       case 'completed':
       case 'done':
@@ -604,7 +583,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         return <IconPlayerPause size={16} color="var(--chatbox-tint-warning)" />
       case 'failed': {
         const isParsedContentTooLarge = error === KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR
-        const isLicenseError = isChatboxAIParserLicenseRequired(error)
         // Determine label based on actual parser type used
         const getParserLabel = () => {
           if (isParsedContentTooLarge) {
@@ -614,7 +592,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
             case 'mineru':
               return t('MinerU parse failed')
             case 'chatbox-ai':
-              return t('Chatbox AI parse failed')
+              return t('Local parse failed')
             default:
               return t('Local parse failed')
           }
@@ -623,25 +601,16 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
           ? t('Parsed document content must be {{limit}} or smaller.', {
               limit: KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE_LABEL,
             })
-          : isLicenseError
-            ? t('Sign in needed')
-            : error || t('Processing failed')
-        const isRemoteParser = parserType === 'mineru' || parserType === 'chatbox-ai'
+          : error || t('Processing failed')
         const statusPill = (
-          <Pill size="xs" c={isRemoteParser ? 'orange' : 'gray'} className="cursor-help">
-            {isLicenseError ? t('Sign in needed') : getParserLabel()}
+          <Pill size="xs" c={parserType === 'mineru' ? 'orange' : 'gray'} className="cursor-help">
+            {getParserLabel()}
           </Pill>
         )
         return (
           <Flex gap={4} align="center">
             <Tooltip label={errorLabel} multiline w={300} withArrow position="top">
-              {isLicenseError && error && fileName ? (
-                <KnowledgeBaseFileErrorButton errorCode={error} fileName={fileName} label={t('Sign in needed')}>
-                  {statusPill}
-                </KnowledgeBaseFileErrorButton>
-              ) : (
-                statusPill
-              )}
+              {statusPill}
             </Tooltip>
           </Flex>
         )
@@ -853,52 +822,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
               </Box>
             )}
 
-            {/* Failed files banner - show Chatbox AI suggestion only for local parser failures */}
-            {shouldShowChatboxAISuggestion && (
-              <Alert variant="light" color="yellow" p="sm">
-                <Flex gap="xs" align="center" justify="space-between">
-                  <Flex gap="xs" align="center" style={{ flex: 1 }}>
-                    <Text size="sm">{t('{{count}} file(s) failed to parse', { count: failedFiles.length })}</Text>
-                  </Flex>
-                  <Stack gap={4} align="flex-end" className="flex-shrink-0">
-                    <Button size="xs" variant="light" onClick={() => setShowRemoteRetryModal(true)}>
-                      {t('Use server parsing')}
-                    </Button>
-                    <Tooltip
-                      label={t(
-                        'If you have never had a license before, you can claim it after logging in on the official website.'
-                      )}
-                      withArrow
-                      multiline
-                      maw={240}
-                      position="bottom-end"
-                      styles={{
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                          backdropFilter: 'blur(4px)',
-                        },
-                      }}
-                    >
-                      <Text
-                        size="xs"
-                        c="dimmed"
-                        className="cursor-pointer hover:text-blue-500 transition-colors"
-                        onClick={() => {
-                          trackJkClickEvent(JK_EVENTS.FREE_LICENSE_CLAIM_CLICK, {
-                            pageName: JK_PAGE_NAMES.SETTING_PAGE,
-                            content: 'kb_error',
-                          })
-                          platform.openLink('https://chatboxai.app/login')
-                        }}
-                      >
-                        {t('Free trial available')} →
-                      </Text>
-                    </Tooltip>
-                  </Stack>
-                </Flex>
-              </Alert>
-            )}
-
             {/* Scrollable Document List with Scroll Indicator */}
             {allFiles.length > 0 && (
               <Box style={{ position: 'relative' }}>
@@ -951,7 +874,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
                                     {doc.parser_type && (
                                       <Pill size="xs" c="dimmed">
                                         {doc.parser_type === 'chatbox-ai'
-                                          ? 'Chatbox AI'
+                                          ? 'Local'
                                           : doc.parser_type === 'mineru'
                                             ? 'MinerU'
                                             : 'Local'}
@@ -990,10 +913,10 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
                           <Group gap="sm" align="center">
                             {doc.status === 'failed' ? (
-                              getStatusIcon(doc.status, doc.error, doc.parser_type, doc.filename)
+                              getStatusIcon(doc.status, doc.error, doc.parser_type)
                             ) : (
                               <Center w={20} h={20}>
-                                {getStatusIcon(doc.status, doc.error, doc.parser_type, doc.filename)}
+                                {getStatusIcon(doc.status, doc.error, doc.parser_type)}
                               </Center>
                             )}
                             {doc.status === 'failed' && doc.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR && (
@@ -1001,12 +924,8 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
                                 variant="subtle"
                                 color="blue"
                                 size="sm"
-                                onClick={() => handleRetryFile(doc.id, isChatboxAIParserLicenseRequired(doc.error))}
-                                title={
-                                  isChatboxAIParserLicenseRequired(doc.error)
-                                    ? t('Retry with server parsing')
-                                    : t('Retry locally')
-                                }
+                                onClick={() => handleRetryFile(doc.id)}
+                                title={t('Retry locally')}
                               >
                                 <IconRefresh size={14} />
                               </ActionIcon>
@@ -1103,17 +1022,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         onClose={chunksPreview.closePreview}
         file={chunksPreview.selectedFile}
         knowledgeBaseId={knowledgeBase?.id}
-      />
-
-      {/* Remote Retry Modal */}
-      <RemoteRetryModal
-        opened={showRemoteRetryModal}
-        onClose={() => setShowRemoteRetryModal(false)}
-        failedFiles={failedFiles}
-        onSuccess={() => {
-          refetch()
-          refetchCount()
-        }}
       />
     </Stack>
   )

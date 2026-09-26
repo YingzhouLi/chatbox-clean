@@ -52,10 +52,13 @@ export async function loadProviderImageModels(
   provider: ModelProviderEnum,
   options: { licenseKey?: string; language?: string } = {}
 ): Promise<ImageModelOption[]> {
+  if (provider === ModelProviderEnum.ChatboxAI) {
+    return []
+  }
   const manifest = await getModelManifest({
     aiProvider: provider,
     language: options.language,
-    licenseKey: provider === ModelProviderEnum.ChatboxAI ? options.licenseKey : undefined,
+    licenseKey: undefined,
   })
   return manifest.imageModels.map(remoteImageModelToOption)
 }

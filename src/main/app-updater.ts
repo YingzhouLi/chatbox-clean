@@ -7,6 +7,12 @@ import { getLogger } from './util'
 
 const log = getLogger('app-updater')
 
+// AdvancedAI is distributed independently from Chatbox and must not contact
+// the upstream Chatbox update endpoints. Keep the updater surface available to
+// the renderer so existing settings screens remain compatible, but make checks
+// a local no-op until an AdvancedAI release feed is configured.
+const ADVANCEDAI_UPDATES_ENABLED = false
+
 function sendToRenderer(win: BrowserWindow | null, channel: string, data?: unknown) {
   if (win && !win.isDestroyed()) {
     win.webContents.send(channel, data)
@@ -93,6 +99,11 @@ export class AppUpdater {
   }
 
   async tryUpdate() {
+    if (!ADVANCEDAI_UPDATES_ENABLED) {
+      log.info('auto_updater: disabled for AdvancedAI build')
+      return null
+    }
+
     if (this.isChecking) {
       log.info('auto_updater: check already in progress, skipping')
       return null

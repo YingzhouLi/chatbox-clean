@@ -19,6 +19,7 @@ import { migrateMessage } from '@shared/utils/message'
 import { BrowserAttachmentAdapter } from '@/adapters/BrowserAttachmentAdapter'
 import { CapacitorAttachmentAdapter } from '@/adapters/CapacitorAttachmentAdapter'
 import { DesktopAttachmentAdapter } from '@/adapters/DesktopAttachmentAdapter'
+import { rendererApplication } from '@/app/renderer-application'
 import { getLogger } from '@/lib/utils'
 import { PREVIEW_LINES } from '@/packages/context-management/attachment-payload'
 import * as localParser from '@/packages/local-parser'
@@ -28,7 +29,6 @@ import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { authInfoStore } from '@/stores/authInfoStore'
-import { rendererApplication } from '@/app/renderer-application'
 import { reportError } from '@/utils/sentry'
 import { migrateSession } from '@/utils/session-utils'
 import * as defaults from '../../shared/defaults'
@@ -274,7 +274,9 @@ type LocalParserFallbackOptions = {
 }
 
 function canFallbackToChatboxAI(): boolean {
-  return Boolean(settingActions.getLicenseKey())
+  // AdvancedAI keeps the legacy parser implementation for compatibility, but
+  // never uploads attachments to the retired Chatbox cloud parser.
+  return false
 }
 
 function isChatboxAIFallbackAllowed(options: LocalParserFallbackOptions): boolean {
@@ -308,7 +310,7 @@ function getDefaultSessionAttachmentEmbeddingModelLabel(): string {
     : 'none'
 }
 
-async function canUseSessionAttachmentRag(): Promise<boolean> {
+function canUseSessionAttachmentRag(): boolean {
   const licenseKey = settingActions.getLicenseKey() || ''
   const hasUsableLicense = hasUsableSessionAttachmentRagLicense()
   const hasDefaultEmbeddingModel = hasDefaultSessionAttachmentEmbeddingModel()
@@ -338,13 +340,11 @@ async function canUseSessionAttachmentRag(): Promise<boolean> {
     return false
   }
 
-  const value = !!(await remote.getSessionRagConfig({ licenseKey: licenseKey || undefined }).catch(() => undefined))
-    ?.capabilities?.session_attachment_embedding
-  log.debug(
-    `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability fetched: embedding=${value}, hasLicense=${Boolean(licenseKey)}, platform=${platform.type}`
-  )
-  sessionRagCapabilityCache = { key: capabilityCacheKey, value }
-  return value
+  // Do not query the Chatbox service for capability flags. A configured local
+  // embedding model is sufficient to enable session retrieval; otherwise the
+  // attachment remains inline and uses the user's selected provider directly.
+  sessionRagCapabilityCache = { key: capabilityCacheKey, value: false }
+  return false
 }
 
 /**
@@ -408,9 +408,6 @@ async function parseFileWithLocalFallback(
       if (shouldFallbackToChatboxAI(options)) {
         return await fallbackToChatboxAIParser(file, 'empty_content')
       }
-      if (isChatboxAIFallbackAllowed(options)) {
-        requireChatboxAIParserLicense()
-      }
       throw new FilePreprocessFailure(
         EMPTY_ATTACHMENT_CONTENT_ERROR,
         'local_parse',
@@ -442,10 +439,6 @@ async function parseFileWithLocalFallback(
 
     if (shouldFallbackToChatboxAI(options)) {
       return await fallbackToChatboxAIParser(file, 'local_parser_failed')
-    }
-
-    if (isChatboxAIFallbackAllowed(options)) {
-      requireChatboxAIParserLicense()
     }
 
     if (errorCode === 'local_parser_failed') {
@@ -552,7 +545,9 @@ async function parsePickedAsset(
     case 'local':
       return parseFileWithLocalFallback(file)
     case 'chatbox-ai':
-      return parseFileWithLocalFallback(file, { forceChatboxAIFallback: true })
+      // Legacy settings are normalized to local parsing. Keep the case so
+      // imported sessions remain readable without invoking Chatbox remotely.
+      return parseFileWithLocalFallback(file)
     case 'mineru': {
       const apiToken = parserConfig.mineru?.apiToken
       if (!apiToken) {
@@ -738,7 +733,7 @@ export async function prepareFileAttachment(
  */
 export async function preprocessLink(
   url: string,
-  settings: SessionSettings
+  _settings: SessionSettings
 ): Promise<{
   url: string
   title: string
@@ -750,7 +745,6 @@ export async function preprocessLink(
   error?: string
 }> {
   try {
-    const isPro = settingActions.isPro()
     const uniqKey = StorageKeyGenerator.linkUniqKey(url)
 
     // 检查是否已经处理过这个链接
@@ -781,65 +775,31 @@ export async function preprocessLink(
       }
     }
 
-    if (isPro) {
-      // ChatboxAI 方案：使用远程解析
-      const licenseKey = settingActions.getLicenseKey()
-      const parsed = await remote.parseUserLinkPro({ licenseKey: licenseKey || '', url })
+    // Always use the local URL parser. The upstream Chatbox Pro branch is
+    // retained in history but is intentionally unreachable in AdvancedAI.
+    const { key, title } = await localParser.parseUrl(url)
+    const content = (await storage.getBlob(key).catch(() => '')) || ''
 
-      // 获取解析后的内容
-      const content = (await storage.getBlob(parsed.storageKey).catch(() => '')) || ''
+    if (content) {
+      await storage.setBlob(uniqKey, content)
+    }
 
-      // 将内容存储到唯一键下
-      if (content) {
-        await storage.setBlob(uniqKey, content)
-      }
+    const { lineCount, byteLength, tokenCountMap } = content
+      ? computePreviewMetadata(content)
+      : { lineCount: undefined, byteLength: undefined, tokenCountMap: {} }
 
-      // Calculate token counts including preview metadata
-      const { lineCount, byteLength, tokenCountMap } = content
-        ? computePreviewMetadata(content)
-        : { lineCount: undefined, byteLength: undefined, tokenCountMap: {} }
+    if (content) {
+      await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
+    }
 
-      // Store token map for future use
-      if (content) {
-        await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
-      }
-
-      return {
-        url,
-        title: parsed.title,
-        content,
-        storageKey: uniqKey,
-        tokenCountMap,
-        lineCount,
-        byteLength,
-      }
-    } else {
-      // 本地方案：解析链接内容
-      const { key, title } = await localParser.parseUrl(url)
-      const content = (await storage.getBlob(key).catch(() => '')) || ''
-
-      // 将内容存储到唯一键下
-      if (content) {
-        await storage.setBlob(uniqKey, content)
-      }
-
-      const { lineCount, byteLength, tokenCountMap } = content
-        ? computePreviewMetadata(content)
-        : { lineCount: undefined, byteLength: undefined, tokenCountMap: {} }
-
-      if (content) {
-        await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
-      }
-
-      return {
-        url,
-        title,
-        content,
-        storageKey: uniqKey,
-        tokenCountMap,
-        lineCount,
-        byteLength,
-      }
+    return {
+      url,
+      title,
+      content,
+      storageKey: uniqKey,
+      tokenCountMap,
+      lineCount,
+      byteLength,
     }
   } catch (error) {
     return {

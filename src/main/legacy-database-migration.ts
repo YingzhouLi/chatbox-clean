@@ -2,8 +2,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
 import log from 'electron-log/main'
+import { configureAdvancedAIAppIdentity } from './app-identity'
 
 const sqliteSidecarSuffixes = ['', '-wal', '-shm', '-journal'] as const
+
+// This module is imported before store-node and other modules that read
+// app.getPath('userData'), so establish AdvancedAI's profile first.
+configureAdvancedAIAppIdentity()
 
 type MigrationFileStatus = 'pending' | 'missing-source' | 'skipped-target-exists' | 'copying' | 'copied' | 'failed'
 

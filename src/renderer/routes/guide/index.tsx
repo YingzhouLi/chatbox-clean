@@ -30,7 +30,7 @@ import {
   IconRefresh,
   IconUserCheck,
 } from '@tabler/icons-react'
-import { createFileRoute, useBlocker } from '@tanstack/react-router'
+import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Divider from '@/components/common/Divider'
@@ -48,10 +48,24 @@ import { GuideMessage } from './-components/GuideMessage'
 import { useGuideSession } from './-hooks/useGuideSession'
 
 export const Route = createFileRoute('/guide/')({
-  component: GuidePage,
+  component: GuideDisabled,
 })
 
-function GuidePage() {
+/**
+ * Keep the upstream guide source available for reference, but do not expose
+ * its Chatbox AI login/claim flow in the AdvancedAI build.
+ */
+function GuideDisabled() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    void navigate({ to: '/settings/provider', replace: true })
+  }, [navigate])
+
+  return null
+}
+
+export function GuidePage() {
   const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
   const viewportRef = useRef<HTMLDivElement>(null)
