@@ -79,10 +79,6 @@ jobs:
           # AdvancedAI is intentionally distributed unsigned until a
           # platform-specific signing certificate is configured.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          CSC_LINK: ''
-          CSC_KEY_PASSWORD: ''
-          WIN_CSC_LINK: ''
-          WIN_CSC_KEY_PASSWORD: ''
         run: pnpm run package -- --${{ matrix.target }}
 
       - name: Upload installer artifacts
