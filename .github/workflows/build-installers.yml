@@ -45,10 +45,28 @@ jobs:
         with:
           node-version: 22.14.0
 
-      - name: Set up pnpm
+      - name: Set up pnpm (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         # Keep this version aligned with package.json#packageManager. Using
         # npm here avoids pnpm/action-setup's deprecated Node.js 20 runtime.
-        run: npm install --global pnpm@10.33.0
+        run: |
+          npm install --global pnpm@10.33.0
+          pnpm_prefix="$(npm prefix --global)"
+          echo "$pnpm_prefix" >> "$GITHUB_PATH"
+          echo "$pnpm_prefix/bin" >> "$GITHUB_PATH"
+          export PATH="$pnpm_prefix:$pnpm_prefix/bin:$PATH"
+          pnpm --version
+
+      - name: Set up pnpm (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm install --global pnpm@10.33.0
+          $pnpmPrefix = (npm prefix --global).Trim()
+          Add-Content -Path $env:GITHUB_PATH -Value $pnpmPrefix
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $pnpmPrefix 'bin')
+          & (Join-Path $pnpmPrefix 'pnpm.cmd') --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
