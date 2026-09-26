@@ -44,6 +44,9 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22.14.0
+          # pnpm is installed in the following step; setup-node's automatic
+          # package-manager cache otherwise tries to execute pnpm too early.
+          package-manager-cache: false
 
       - name: Set up pnpm (Unix)
         if: runner.os != 'Windows'
