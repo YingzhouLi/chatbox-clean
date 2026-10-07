@@ -15,23 +15,36 @@ concurrency:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }} installer
+    name: Build ${{ matrix.platform }} ${{ matrix.arch }} installer
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macOS
+            arch: Apple Silicon
             os: macos-14
-            target: mac
-            artifact: advancedai-macos
+            build_args: --mac --arm64
+            artifact: advancedai-macos-arm64
+          - platform: macOS
+            arch: Intel
+            os: macos-14
+            build_args: --mac --x64
+            artifact: advancedai-macos-x64
           - platform: Windows
+            arch: x64
             os: windows-latest
-            target: win
-            artifact: advancedai-windows
+            build_args: --win --x64
+            artifact: advancedai-windows-x64
           - platform: Linux
+            arch: x64
             os: ubuntu-24.04
-            target: linux
-            artifact: advancedai-linux
+            build_args: --linux deb --x64
+            artifact: advancedai-linux-x64-deb
+          - platform: Linux
+            arch: ARM64
+            os: ubuntu-24.04
+            build_args: --linux deb --arm64
+            artifact: advancedai-linux-arm64-deb
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -79,7 +92,7 @@ jobs:
           # AdvancedAI is intentionally distributed unsigned until a
           # platform-specific signing certificate is configured.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: pnpm run package -- --${{ matrix.target }}
+        run: pnpm run package -- ${{ matrix.build_args }}
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v7
@@ -87,9 +100,7 @@ jobs:
           name: ${{ matrix.artifact }}-${{ github.sha }}
           path: |
             release/build/*.dmg
-            release/build/*.zip
             release/build/*.exe
-            release/build/*.AppImage
             release/build/*.deb
           if-no-files-found: error
           retention-days: 14

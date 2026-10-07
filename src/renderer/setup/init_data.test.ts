@@ -55,7 +55,7 @@ describe('initData', () => {
     storageMock.setItemNow.mockResolvedValue(undefined)
   })
 
-  it('uses all session meta records to decide whether default sessions are needed', async () => {
+  it('does not seed sample sessions when session metadata exists', async () => {
     metaStorage.getAllTotal.mockResolvedValue(1)
 
     await initData()
@@ -65,13 +65,13 @@ describe('initData', () => {
     expect(metaStorage.createMany).not.toHaveBeenCalled()
   })
 
-  it('creates default sessions when session meta storage is empty', async () => {
+  it('keeps a new installation empty when session metadata is empty', async () => {
     metaStorage.getAllTotal.mockResolvedValue(0)
 
     await initData()
 
-    expect(storageMock.setItemNow).toHaveBeenCalled()
-    expect(metaStorage.createMany).toHaveBeenCalled()
+    expect(storageMock.setItemNow).not.toHaveBeenCalled()
+    expect(metaStorage.createMany).not.toHaveBeenCalled()
   })
 })
 

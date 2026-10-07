@@ -31,10 +31,8 @@ mac:
   notarize: false
   category: public.app-category.developer-tools
   target:
-    target: default
-    arch:
-      - arm64
-      - x64
+    - target: dmg
+  artifactName: ${productName}-${version}-${arch}.${ext}
   type: distribution
   hardenedRuntime: true
   entitlements: assets/entitlements.mac.plist
@@ -53,9 +51,6 @@ dmg:
 win:
   target:
     - target: nsis
-      arch:
-        - x64
-        - arm64
   verifyUpdateCodeSignature: false
   artifactName: ${productName}-${version}-Setup.${ext}
 
@@ -66,14 +61,7 @@ nsis:
 
 linux:
   target:
-    - target: AppImage
-      arch:
-        - x64
-        - arm64
     - target: deb
-      arch:
-        - x64
-        - arm64
   category: Development
   artifactName: ${productName}-${version}-${arch}.${ext}
 
