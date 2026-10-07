@@ -1,8 +1,20 @@
 import { ModelProviderEnum, ModelProviderType } from '@shared/types'
 import { describe, expect, it } from 'vitest'
-import { parseProviderFromJson, validateProviderConfig } from './provider-config'
+import { isTrustedAdvancedAiImport, parseProviderFromJson, validateProviderConfig } from './provider-config'
 
 describe('provider-config', () => {
+  it('trusts only the AdvancedAI OneAPI auto-import contract', () => {
+    const trusted = parseProviderFromJson(JSON.stringify({
+      id: 'advancedsolver-one-api',
+      name: 'Advancedsolver AI',
+      type: 'openai',
+      isCustom: true,
+      settings: { apiHost: 'https://oneapi.advancedsolver.com/v1', apiKey: 'sk-test' },
+    }))
+    expect(isTrustedAdvancedAiImport(trusted)).toBe(true)
+    expect(isTrustedAdvancedAiImport({ ...trusted, apiHost: 'https://example.com/v1' })).toBe(false)
+  })
+
   describe('parseProviderFromJson', () => {
     it('should parse a valid custom provider config', () => {
       const configJson = JSON.stringify({

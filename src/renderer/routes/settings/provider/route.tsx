@@ -3,23 +3,25 @@ import { SystemProviders } from '@shared/defaults'
 import type { ModelProviderEnum, ProviderInfo, ProviderSettings } from '@shared/types'
 import { createFileRoute, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AddProviderModal } from '@/components/settings/provider/AddProviderModal'
 import { ImportProviderModal } from '@/components/settings/provider/ImportProviderModal'
+import { buildImportedProviderSettingsUpdate } from '@/components/settings/provider/importProviderState'
 import { ProviderList } from '@/components/settings/provider/ProviderList'
 import ProviderSpotlight, { providerSpotlight } from '@/components/settings/provider/ProviderSpotlight'
 import { useProviderImport } from '@/hooks/useProviderImport'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import useVersion from '@/hooks/useVersion'
-import { useSettingsStore } from '@/stores/settingsStore'
+import { settingsStore, useSettingsStore } from '@/stores/settingsStore'
 import { add as addToast } from '@/stores/toastActions'
 import { decodeBase64 } from '@/utils/base64'
-import { parseProviderFromJson } from '@/utils/provider-config'
+import { isTrustedAdvancedAiImport, parseProviderFromJson } from '@/utils/provider-config'
 
 const searchSchema = z.object({
   import: z.string().optional(), // base64 encoded config
+  auto: z.literal('1').optional(),
   custom: z.boolean().optional(),
 })
 
@@ -87,6 +89,7 @@ export function RouteComponent() {
   } = useProviderImport(providers)
 
   const searchParams = Route.useSearch()
+  const processedImport = useRef<string | null>(null)
 
   // Show toast for import errors
   useEffect(() => {
@@ -108,9 +111,29 @@ export function RouteComponent() {
 
   useEffect(() => {
     if (searchParams.import) {
+      if (processedImport.current === searchParams.import) return
+      processedImport.current = searchParams.import
       try {
         const decoded = decodeBase64(searchParams.import)
-        setDeepLinkConfig(parseProviderFromJson(decoded) || null)
+        const parsed = parseProviderFromJson(decoded)
+        if (searchParams.auto === '1' && isTrustedAdvancedAiImport(parsed)) {
+          if (!parsed) return
+          const current = settingsStore.getState()
+          const existing = providers.find((provider) => provider.id === parsed.id) ?? null
+          current.setSettings({
+            ...buildImportedProviderSettingsUpdate({
+              importedConfig: parsed,
+              existingProvider: existing,
+              providers: current.providers,
+              customProviders: current.customProviders,
+            }),
+            defaultChatModel: { provider: 'advancedsolver-one-api', model: 'gpt-6-sol' },
+          })
+          addToast(t('Provider imported successfully'))
+          setDeepLinkConfig(null)
+        } else {
+          setDeepLinkConfig(parsed || null)
+        }
       } catch (err) {
         console.error('Failed to parse deep link config:', err)
         setImportError(t('Invalid deep link config format'))
@@ -125,8 +148,10 @@ export function RouteComponent() {
           replace: true,
         })
       }
+    } else {
+      processedImport.current = null
     }
-  }, [searchParams.import, setImportError, t, navigate])
+  }, [searchParams.import, searchParams.auto, setImportError, t, navigate, providers])
 
   useEffect(() => {
     if (deepLinkConfig) {

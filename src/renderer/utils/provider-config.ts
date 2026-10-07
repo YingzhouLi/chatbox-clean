@@ -48,6 +48,21 @@ const ProviderConfigSchema = z.union([BuiltinProviderConfigSchema, CustomProvide
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>
 
+/** Only the pinned OneAPI endpoint can be installed without a confirmation dialog. */
+export function isTrustedAdvancedAiImport(config: unknown): boolean {
+  if (!config || typeof config !== 'object') return false
+  const provider = config as Partial<ProviderInfo>
+  return (
+    provider.isCustom === true &&
+    provider.id === 'advancedsolver-one-api' &&
+    provider.type === ModelProviderType.OpenAI &&
+    provider.apiHost === 'https://oneapi.advancedsolver.com/v1' &&
+    (provider.apiPath === undefined || provider.apiPath === '') &&
+    typeof provider.apiKey === 'string' &&
+    provider.apiKey.length > 0
+  )
+}
+
 function assertCustomProviderIdIsAvailable(providerId: string): void {
   if (isBuiltinProviderId(providerId)) {
     throw new Error(CUSTOM_PROVIDER_ID_CONFLICT)
