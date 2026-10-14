@@ -94,7 +94,7 @@ jobs:
           # macOS uses an explicit ad-hoc identity; Windows remains unsigned
           # until a platform-specific signing certificate is configured.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: pnpm run package -- ${{ matrix.build_args }}
+        run: pnpm run package ${{ matrix.build_args }}
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v7
