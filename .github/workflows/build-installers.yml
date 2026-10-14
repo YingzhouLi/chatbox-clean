@@ -23,14 +23,14 @@ jobs:
           - platform: macOS
             arch: Apple Silicon
             os: macos-15
-            build_args: --mac --arm64
+            build_args: --mac --arm64 -c.mac.identity=-
             artifact: advancedai-macos-arm64
           - platform: macOS
             arch: Intel
             # Build Intel on an Intel runner so Electron native modules and
             # optional dependencies are installed for x86_64, not arm64.
             os: macos-15-intel
-            build_args: --mac --x64
+            build_args: --mac --x64 -c.mac.identity=-
             artifact: advancedai-macos-x64
           - platform: Windows
             arch: x64
@@ -91,8 +91,8 @@ jobs:
 
       - name: Build installer
         env:
-          # AdvancedAI is intentionally distributed unsigned until a
-          # platform-specific signing certificate is configured.
+          # macOS uses an explicit ad-hoc identity; Windows remains unsigned
+          # until a platform-specific signing certificate is configured.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: pnpm run package -- ${{ matrix.build_args }}
 
