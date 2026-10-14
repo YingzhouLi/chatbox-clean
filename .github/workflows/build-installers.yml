@@ -22,12 +22,14 @@ jobs:
         include:
           - platform: macOS
             arch: Apple Silicon
-            os: macos-14
+            os: macos-15
             build_args: --mac --arm64
             artifact: advancedai-macos-arm64
           - platform: macOS
             arch: Intel
-            os: macos-14
+            # Build Intel on an Intel runner so Electron native modules and
+            # optional dependencies are installed for x86_64, not arm64.
+            os: macos-15-intel
             build_args: --mac --x64
             artifact: advancedai-macos-x64
           - platform: Windows
